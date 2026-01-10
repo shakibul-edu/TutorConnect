@@ -1,43 +1,36 @@
-import React, { useState, useEffect, createContext, useContext } from 'react';
 
-const RouterContext = createContext<{ currentPath: string; navigate: (path: string) => void } | null>(null);
+'use client';
 
-// Fix: Explicitly use React.FC to properly type the component and its children prop
+import React from 'react';
+import { useRouter as useNextRouter, usePathname as useNextPathname } from 'next/navigation';
+import NextLink from 'next/link';
+
+// Shim for RouterProvider - not needed in App Router but kept for compatibility
 export const RouterProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentPath, setCurrentPath] = useState('home');
-
-  useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash.slice(1) || 'home';
-      setCurrentPath(hash);
-    };
-    window.addEventListener('hashchange', handleHashChange);
-    // Initialize
-    handleHashChange();
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
-
-  const navigate = (path: string) => {
-    window.location.hash = path;
-  };
-
-  return (
-    <RouterContext.Provider value={{ currentPath, navigate }}>
-      {children}
-    </RouterContext.Provider>
-  );
+  return <>{children}</>;
 };
 
 export const useRouter = () => {
-  const context = useContext(RouterContext);
-  if (!context) throw new Error("useRouter must be used within RouterProvider");
-  return { push: context.navigate };
+  const router = useNextRouter();
+  return { 
+    push: (path: string) => {
+        // Handle "home" as root
+        if (path === 'home') {
+            router.push('/');
+            return;
+        }
+        // Ensure path starts with /
+        const target = path.startsWith('/') ? path : `/${path}`;
+        router.push(target);
+    } 
+  };
 };
 
 export const usePathname = () => {
-  const context = useContext(RouterContext);
-  if (!context) throw new Error("usePathname must be used within RouterProvider");
-  return context.currentPath;
+  const pathname = useNextPathname();
+  if (!pathname || pathname === '/') return 'home';
+  // Return path without leading slash to match old app logic (e.g., 'jobs', 'dashboard')
+  return pathname.startsWith('/') ? pathname.slice(1) : pathname;
 };
 
 interface LinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
@@ -45,18 +38,13 @@ interface LinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
 }
 
 export const Link: React.FC<LinkProps> = ({ href, children, className, ...props }) => {
-  const { navigate } = useContext(RouterContext)!;
+  let target = href;
+  if (href === 'home') target = '/';
+  else if (!href.startsWith('/')) target = `/${href}`;
+
   return (
-    <a
-      href={`#${href}`}
-      onClick={(e) => {
-        e.preventDefault();
-        navigate(href);
-      }}
-      className={className}
-      {...props}
-    >
+    <NextLink href={target} className={className} {...props}>
       {children}
-    </a>
+    </NextLink>
   );
 };

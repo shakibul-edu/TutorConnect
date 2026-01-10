@@ -1,3 +1,6 @@
+
+'use client';
+
 import React from 'react';
 import { useRouter } from '../lib/router';
 import { JobCard } from '../components/JobCard';

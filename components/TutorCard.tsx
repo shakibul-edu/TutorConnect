@@ -1,4 +1,6 @@
 
+'use client';
+
 import React from 'react';
 import { TeacherProfile } from '../types';
 import { MapPin, Star, CheckCircle, School, Flag, Wifi } from 'lucide-react';

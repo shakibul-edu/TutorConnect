@@ -1,4 +1,6 @@
 
+'use client';
+
 import React, { useState } from 'react';
 import { JobPost } from '../types';
 import { MapPin, DollarSign, BookOpen, Clock, Users } from 'lucide-react';

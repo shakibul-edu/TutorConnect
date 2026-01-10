@@ -12,7 +12,7 @@ export interface FetchApiOptions {
 }
 
 export class FetchApi {
-    private static baseUrl: string = process.env.BASE_URL || 'http://127.0.0.1:8000';
+    private static baseUrl: string = process.env.NEXT_PUBLIC_BASE_URL || process.env.BASE_URL || 'http://127.0.0.1:8000';
 
     private static buildEndpointUrl(endpoint: string): string {
         return `${this.baseUrl}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
@@ -67,8 +67,10 @@ export class FetchApi {
                     // Ignore JSON parse errors, use default message
                 }
                 
-                // Show toast for error
-                toast.error(errorMessage);
+                // Show toast for error - strictly client side, will be ignored if on server (toast implementation is safe)
+                if (typeof window !== 'undefined') {
+                     toast.error(errorMessage);
+                }
                 throw new Error(errorMessage);
             }
 
@@ -77,7 +79,7 @@ export class FetchApi {
             // If it's a network error or something not caught above
             const msg = error.message || 'Network request failed';
             // Avoid double toasting if we already threw with a message above
-            if (!error.message || error.message === 'Failed to fetch') {
+            if ((!error.message || error.message === 'Failed to fetch') && typeof window !== 'undefined') {
                  toast.error('Network error: Unable to connect to server');
             }
             throw error;

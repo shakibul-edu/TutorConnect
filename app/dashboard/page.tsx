@@ -1,4 +1,6 @@
 
+'use client';
+
 import React, { useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { stateManager } from '../../services/stateManager';

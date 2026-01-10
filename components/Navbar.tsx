@@ -1,3 +1,6 @@
+
+'use client';
+
 import React, { useState } from 'react';
 import { Link, usePathname, useRouter } from '../lib/router';
 import { useAuth } from '../lib/auth';

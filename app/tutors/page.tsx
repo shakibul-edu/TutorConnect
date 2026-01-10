@@ -1,3 +1,6 @@
+
+'use client';
+
 import React, { useState } from 'react';
 import { TutorCard } from '../../components/TutorCard';
 import { MOCK_TEACHERS } from '../../services/mockData';

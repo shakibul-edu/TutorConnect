@@ -1,3 +1,6 @@
+
+'use client';
+
 import React from 'react';
 import TeacherProfileForm from '../../components/TeacherProfileForm';
 import { useAuth } from '../../lib/auth';

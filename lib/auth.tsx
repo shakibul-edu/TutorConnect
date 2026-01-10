@@ -1,3 +1,6 @@
+
+'use client';
+
 import React, { createContext, useContext, useState } from 'react';
 import { User } from '../types';
 import AuthModal from '../components/AuthModal';

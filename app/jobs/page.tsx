@@ -1,4 +1,6 @@
 
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { JobCard } from '../../components/JobCard';
 import Sidebar, { FilterState } from '../../components/Sidebar';
