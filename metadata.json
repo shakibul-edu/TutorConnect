@@ -1,0 +1,5 @@
+{
+  "name": "TutorConnect",
+  "description": "A comprehensive platform connecting students with qualified tutors, featuring job postings, teacher profiles, and bidding systems based on Django backend architecture.",
+  "requestFramePermissions": []
+}
