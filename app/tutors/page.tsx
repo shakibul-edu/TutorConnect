@@ -68,7 +68,7 @@ const TutorsPage: React.FC = () => {
         </div>
 
         {/* Sidebar */}
-        <div className={`lg:w-64 flex-shrink-0 ${showMobileFilter ? 'block' : 'hidden lg:block'}`}>
+        <div className={`lg:w-72 flex-shrink-0 ${showMobileFilter ? 'block' : 'hidden lg:block'}`}>
              <Sidebar onApplyFilter={(newFilters) => {
                 setFilters(newFilters);
                 setShowMobileFilter(false);

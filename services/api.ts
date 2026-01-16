@@ -1,111 +1,285 @@
 
-import { toast } from '../lib/toast';
-import { stateManager } from './stateManager';
+import { FetchApi } from '../utils/FetchApi';
+import { 
+  connectToServer, 
+  setLocation, 
+  getLocation 
+} from '../utils/genralCall';
+import {
+  createTeacher,
+  createAvailability,
+  updateTeacher,
+  updateQualification,
+  deleteQualification,
+  updateAvailability,
+  submitAcademicProfiles,
+  updateAcademicProfile,
+  deleteAcademicProfile,
+  submitQualification
+} from '../utils/formSubmission';
+import {
+  getGradesbyMedium,
+  getMediums,
+  getSubjects,
+  getTeacherProfile,
+  getAcademicProfile,
+  getQualification,
+  getSlots
+} from '../utils/fetchFormInfo';
 import { User, JobPost, TeacherProfile, Bid, BidStatus } from '../types';
 
-// In a real app, this would be your backend URL
-const API_BASE_URL = 'https://api.tutorconnect.com/v1';
-
-interface ApiResponse<T> {
-  data: T;
-  success: boolean;
-  message?: string;
-}
-
-// Generic Request Handler
-async function request<T>(
-  endpoint: string, 
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
-  body?: any,
-  showSuccessToast = false
-): Promise<T> {
-  try {
-    // 1. Setup Headers (Auth, Content-Type)
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-    };
-    
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    // 2. SIMULATION: Intercept requests to mock backend (stateManager)
-    // In production, this block is replaced by the actual fetch call below
-    await new Promise(resolve => setTimeout(resolve, 600)); // Simulate network latency
-
-    let result: any;
-    
-    // --- Mock Routing Logic ---
-    if (endpoint === '/auth/login') {
-        // Mock Login
-        result = body; 
-    } else if (endpoint === '/jobs' && method === 'GET') {
-        result = stateManager.getJobs();
-    } else if (endpoint === '/jobs' && method === 'POST') {
-        result = stateManager.addJob(body);
-    } else if (endpoint === '/bids' && method === 'POST') {
-        result = stateManager.addBid(body);
-    } else if (endpoint.startsWith('/teacher/profile') && method === 'PUT') {
-        stateManager.updateTeacherProfile(body);
-        result = body;
-    }
-    // ... add other mock routes as needed
-    // --- End Mock Routing ---
-
-    // 3. Real Fetch (Commented out for mock environment)
-    /*
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      method,
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
-    }
-    result = await response.json();
-    */
-
-    // 4. Handle Success
-    if (showSuccessToast) {
-        toast.success(result?.message || 'Operation successful');
-    }
-
-    return result as T;
-
-  } catch (error: any) {
-    // 5. Centralized Error Handling
-    console.error(`API Error [${endpoint}]:`, error);
-    const errorMessage = error.message || 'An unexpected error occurred';
-    toast.error(errorMessage);
-    throw error;
+// Get auth token from localStorage or sessionStorage
+const getAuthToken = (): string | null => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('auth_token') || sessionStorage.getItem('access_token');
   }
-}
+  return null;
+};
 
 // --- API Methods ---
 
 export const api = {
   auth: {
-    login: (user: User) => request<User>('/auth/login', 'POST', user, true),
+    // Server connection check
+    connect: async () => {
+      const token = getAuthToken();
+      if (token) {
+        return await connectToServer(token);
+      }
+      return null;
+    },
+    login: (user: User) => {
+      // Store token if provided
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('auth_token', 'mock_token'); // Replace with actual token from backend
+      }
+      return Promise.resolve(user);
+    },
     logout: () => {
+      if (typeof window !== 'undefined') {
         localStorage.removeItem('auth_token');
-        toast.info('Logged out successfully');
+        sessionStorage.removeItem('access_token');
+      }
     }
   },
+  
+  location: {
+    set: async (location: string, params?: { update?: string }) => {
+      const token = getAuthToken();
+      if (token) {
+        return await setLocation(token, location, params);
+      }
+      throw new Error('No authentication token found');
+    },
+    get: async () => {
+      const token = getAuthToken();
+      if (token) {
+        return await getLocation(token);
+      }
+      return null;
+    }
+  },
+
+  teacher: {
+    create: async (data: any) => {
+      const token = getAuthToken();
+      if (token) {
+        return await createTeacher(token, data);
+      }
+      throw new Error('No authentication token found');
+    },
+    update: async (id: string, data: any) => {
+      const token = getAuthToken();
+      if (token) {
+        return await updateTeacher(token, id, data);
+      }
+      throw new Error('No authentication token found');
+    },
+    getProfile: async (id?: string) => {
+      const token = getAuthToken();
+      if (token) {
+        return await getTeacherProfile(token, id);
+      }
+      return null;
+    }
+  },
+
+  availability: {
+    create: async (data: any) => {
+      const token = getAuthToken();
+      if (token) {
+        return await createAvailability(token, data);
+      }
+      throw new Error('No authentication token found');
+    },
+    update: async (id: string, data: any) => {
+      const token = getAuthToken();
+      if (token) {
+        return await updateAvailability(token, id, data);
+      }
+      throw new Error('No authentication token found');
+    },
+    getSlots: async () => {
+      const token = getAuthToken();
+      if (token) {
+        return await getSlots(token);
+      }
+      return null;
+    }
+  },
+
+  academicProfile: {
+    create: async (data: any) => {
+      const token = getAuthToken();
+      if (token) {
+        return await submitAcademicProfiles(token, data);
+      }
+      throw new Error('No authentication token found');
+    },
+    update: async (id: string, data: any) => {
+      const token = getAuthToken();
+      if (token) {
+        return await updateAcademicProfile(token, id, data);
+      }
+      throw new Error('No authentication token found');
+    },
+    delete: async (id: string) => {
+      const token = getAuthToken();
+      if (token) {
+        return await deleteAcademicProfile(token, id);
+      }
+      throw new Error('No authentication token found');
+    },
+    getAll: async () => {
+      const token = getAuthToken();
+      if (token) {
+        return await getAcademicProfile(token);
+      }
+      return null;
+    }
+  },
+
+  qualification: {
+    create: async (data: any) => {
+      const token = getAuthToken();
+      if (token) {
+        return await submitQualification(token, data);
+      }
+      throw new Error('No authentication token found');
+    },
+    update: async (id: string, data: any) => {
+      const token = getAuthToken();
+      if (token) {
+        return await updateQualification(token, id, data);
+      }
+      throw new Error('No authentication token found');
+    },
+    delete: async (id: string) => {
+      const token = getAuthToken();
+      if (token) {
+        return await deleteQualification(token, id);
+      }
+      throw new Error('No authentication token found');
+    },
+    getAll: async () => {
+      const token = getAuthToken();
+      if (token) {
+        return await getQualification(token);
+      }
+      return null;
+    }
+  },
+
+  grades: {
+    getByMedium: async (medium_ids: string[]) => {
+      const token = getAuthToken();
+      if (token) {
+        return await getGradesbyMedium(token, { medium_id: medium_ids });
+      }
+      return null;
+    }
+  },
+
+  mediums: {
+    getAll: async () => {
+      const token = getAuthToken();
+      if (token) {
+        return await getMediums(token);
+      }
+      return null;
+    }
+  },
+
+  subjects: {
+    getByGrade: async (grade_ids: string[]) => {
+      const token = getAuthToken();
+      if (token) {
+        return await getSubjects(token, { grade_id: grade_ids });
+      }
+      return null;
+    }
+  },
+
   jobs: {
-    getAll: () => request<JobPost[]>('/jobs', 'GET'),
-    create: (jobData: any) => request<JobPost>('/jobs', 'POST', jobData, true),
-    getById: (id: string) => request<JobPost>(`/jobs/${id}`, 'GET'),
+    getAll: async () => {
+      const token = getAuthToken();
+      try {
+        return await FetchApi.get<JobPost[]>('/jobs/', {}, token ? {'Authorization': `Bearer ${token}`} : {});
+      } catch (error) {
+        console.error('Error fetching jobs:', error);
+        return [];
+      }
+    },
+    create: async (jobData: any) => {
+      const token = getAuthToken();
+      if (token) {
+        return await FetchApi.post<JobPost>('/jobs/', jobData, {'Authorization': `Bearer ${token}`});
+      }
+      throw new Error('No authentication token found');
+    },
+    getById: async (id: string) => {
+      const token = getAuthToken();
+      return await FetchApi.get<JobPost>(`/jobs/${id}/`, {}, token ? {'Authorization': `Bearer ${token}`} : {});
+    }
   },
+
   tutors: {
-    getAll: () => request<TeacherProfile[]>('/tutors', 'GET'),
-    updateProfile: (profile: TeacherProfile) => request<TeacherProfile>(`/teacher/profile/${profile.id}`, 'PUT', profile, true),
-    getById: (id: string) => request<TeacherProfile>(`/tutors/${id}`, 'GET'),
+    getAll: async () => {
+      const token = getAuthToken();
+      try {
+        return await FetchApi.get<TeacherProfile[]>('/teachers/', {}, token ? {'Authorization': `Bearer ${token}`} : {});
+      } catch (error) {
+        console.error('Error fetching tutors:', error);
+        return [];
+      }
+    },
+    updateProfile: async (profile: TeacherProfile) => {
+      const token = getAuthToken();
+      if (token) {
+        return await FetchApi.put<TeacherProfile>(`/teacher-profile/${profile.id}/`, profile, {'Authorization': `Bearer ${token}`});
+      }
+      throw new Error('No authentication token found');
+    },
+    getById: async (id: string) => {
+      const token = getAuthToken();
+      return await FetchApi.get<TeacherProfile>(`/teachers/${id}/`, {}, token ? {'Authorization': `Bearer ${token}`} : {});
+    }
   },
+
   bids: {
-    create: (bidData: any) => request<Bid>('/bids', 'POST', bidData, true),
-    updateStatus: (bidId: number, status: BidStatus) => request<Bid>(`/bids/${bidId}/status`, 'PUT', { status }, true)
+    create: async (bidData: any) => {
+      const token = getAuthToken();
+      if (token) {
+        return await FetchApi.post<Bid>('/bids/', bidData, {'Authorization': `Bearer ${token}`});
+      }
+      throw new Error('No authentication token found');
+    },
+    updateStatus: async (bidId: number, status: BidStatus) => {
+      const token = getAuthToken();
+      if (token) {
+        return await FetchApi.put<Bid>(`/bids/${bidId}/status/`, { status }, {'Authorization': `Bearer ${token}`});
+      }
+      throw new Error('No authentication token found');
+    }
   }
 };

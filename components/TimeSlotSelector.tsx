@@ -1,6 +1,5 @@
 
 import React from 'react';
-import MultiSelect from './MultiSelect';
 import { Clock } from 'lucide-react';
 
 interface TimeSlotSelectorProps {
@@ -23,12 +22,10 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({ value, onChange }) 
   const start = value?.start || '';
   const end = value?.end || '';
 
-  // Map internal short codes to option IDs for MultiSelect
-  const selectedIds = DAYS_OPTIONS.filter(d => currentDays.includes(d.value)).map(d => d.id);
-
-  const handleDayChange = (ids: number[]) => {
-    // Map selected IDs back to day values ('Mon', 'Tue'...)
-    const newDays = DAYS_OPTIONS.filter(d => ids.includes(d.id)).map(d => d.value);
+  const toggleDay = (dayValue: string) => {
+    const newDays = currentDays.includes(dayValue)
+      ? currentDays.filter(d => d !== dayValue)
+      : [...currentDays, dayValue];
     onChange({ start, end, days: newDays });
   };
 
@@ -43,35 +40,45 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({ value, onChange }) 
   return (
     <div className="flex flex-col gap-3">
       <div className="w-full">
-         <MultiSelect
-            label="Select Days"
-            options={DAYS_OPTIONS}
-            selectedIds={selectedIds}
-            onChange={handleDayChange}
-            placeholder="Choose days (e.g. Mon, Wed)"
-         />
+        <label className="block text-sm font-semibold text-gray-700 mb-2">Select Days</label>
+        <div className="flex flex-wrap gap-2">
+          {DAYS_OPTIONS.map((day) => (
+            <button
+              key={day.id}
+              type="button"
+              onClick={() => toggleDay(day.value)}
+              className={`px-2 py-1 text-xs font-medium rounded-md transition-colors ${
+                currentDays.includes(day.value)
+                  ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              {day.value}
+            </button>
+          ))}
+        </div>
       </div>
       
-      <div className="flex items-center gap-4 bg-white p-3 border border-gray-200 rounded-md shadow-sm">
-        <Clock className="w-4 h-4 text-gray-400" />
-        <div className="flex-1 flex items-center gap-2">
-            <div className="relative flex-1 group">
+      <div className="flex items-center gap-3 bg-white p-3 border border-gray-200 rounded-md shadow-sm">
+        <Clock className="lg:hidden w-4 h-4 text-gray-400 flex-shrink-0" />
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+            <div className="relative flex-1 min-w-[100px] max-w-[140px] group">
                 <label className="absolute -top-2 left-2 bg-white px-1 text-[10px] font-semibold text-gray-500 group-focus-within:text-indigo-600 transition-colors">Start Time</label>
                 <input
                     type="time"
                     value={start}
                     onChange={(e) => handleTimeChange('start', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 font-medium text-gray-700 bg-transparent"
+                    className="w-full px-2 py-2 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 font-medium text-gray-700 bg-transparent"
                 />
             </div>
-            <span className="text-gray-400 font-medium">-</span>
-            <div className="relative flex-1 group">
+            <span className="text-gray-400 font-medium flex-shrink-0">-</span>
+            <div className="relative flex-1 min-w-[100px] max-w-[140px] group">
                 <label className="absolute -top-2 left-2 bg-white px-1 text-[10px] font-semibold text-gray-500 group-focus-within:text-indigo-600 transition-colors">End Time</label>
                 <input
                     type="time"
                     value={end}
                     onChange={(e) => handleTimeChange('end', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 font-medium text-gray-700 bg-transparent"
+                    className="w-full px-2 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 font-medium text-gray-700 bg-transparent"
                 />
             </div>
         </div>

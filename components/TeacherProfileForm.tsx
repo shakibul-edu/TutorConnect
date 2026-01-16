@@ -1,22 +1,44 @@
-
 import React, { useState, useEffect } from 'react';
 import { useRouter } from '../lib/router';
 import { useAuth } from '../lib/auth';
+import { useSession } from 'next-auth/react';
+import { toast } from '../lib/toast';
 import Availability from './Availability';
 import MultiSelect from './MultiSelect';
-import { MOCK_MEDIUMS, MOCK_GRADES, MOCK_SUBJECTS } from '../services/mockData';
-import { stateManager } from '../services/stateManager';
-import { AvailabilitySlot, Education, Qualification, TeacherProfile, Gender, TeachingMode } from '../types';
-import { Save } from 'lucide-react';
+import { AvailabilitySlot, Education, Qualification, Gender, TeachingMode, Medium, Grade, Subject } from '../types';
+import { Save, Loader2 } from 'lucide-react';
 import EducationSection from './profile-form/EducationSection';
 import QualificationSection from './profile-form/QualificationSection';
+import { 
+    getMediums, 
+    getGradesbyMedium, 
+    getSubjects, 
+    getTeacherProfile, 
+    createTeacher, 
+    updateTeacher,
+    getAcademicProfile,
+    getQualification,
+    getSlots,
+    // createAvailability, // Not used if we assume updateAvailability handles list replacement or we rely on loop
+    updateAvailability,
+    submitAcademicProfiles,
+    updateAcademicProfile,
+    deleteAcademicProfile, 
+    submitQualification,
+    updateQualification,
+    deleteQualification
+} from '../services/backend';
 
 const TeacherProfileForm: React.FC = () => {
   const { user } = useAuth();
+  // @ts-ignore
+  const { data: session } = useSession();
   const { push } = useRouter();
 
   // Profile ID tracking
   const [profileId, setProfileId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   // Form State
   const [bio, setBio] = useState('');
@@ -26,6 +48,11 @@ const TeacherProfileForm: React.FC = () => {
   const [teachingMode, setTeachingMode] = useState<TeachingMode>('online');
   const [distance, setDistance] = useState(5);
   
+  // Selection Options (Fetched from API)
+  const [mediumOptions, setMediumOptions] = useState<Medium[]>([]);
+  const [gradeOptions, setGradeOptions] = useState<Grade[]>([]);
+  const [subjectOptions, setSubjectOptions] = useState<Subject[]>([]);
+
   // Selection State (IDs)
   const [selectedMediums, setSelectedMediums] = useState<number[]>([]);
   const [selectedGrades, setSelectedGrades] = useState<number[]>([]);
@@ -37,75 +64,267 @@ const TeacherProfileForm: React.FC = () => {
   ]);
 
   const [educationList, setEducationList] = useState<Education[]>([]);
+  const [initialEducationIds, setInitialEducationIds] = useState<number[]>([]);
+
   const [qualificationList, setQualificationList] = useState<Qualification[]>([]);
+  const [initialQualificationIds, setInitialQualificationIds] = useState<number[]>([]);
+  
+  // Helper to get token
+  // @ts-ignore
+  const token = session?.id_token || (session as any)?.token; // Fallback
 
-  // Load existing data
+  // Load Metadata (Mediums)
   useEffect(() => {
-    if (user) {
-        const existingProfile = stateManager.getTeacherProfile(user.id);
-        if (existingProfile) {
-            setProfileId(existingProfile.id);
-            setBio(existingProfile.bio);
-            setMinSalary(existingProfile.min_salary);
-            setExperience(existingProfile.experience_years);
-            setGender(existingProfile.gender);
-            setTeachingMode(existingProfile.teaching_mode);
-            setDistance(existingProfile.preferred_distance);
-            
-            setSelectedMediums(existingProfile.mediums.map(m => m.id));
-            setSelectedGrades(existingProfile.grades.map(g => g.id));
-            setSelectedSubjects(existingProfile.subjects.map(s => s.id));
-            
-            if (existingProfile.availability) setAvailability(existingProfile.availability);
-            if (existingProfile.education) setEducationList(existingProfile.education);
-            if (existingProfile.qualifications) setQualificationList(existingProfile.qualifications);
-        }
+    if (token) {
+        getMediums(token).then((data) => {
+            if (data) setMediumOptions(data);
+        }).catch(err => console.error("Failed to fetch mediums", err));
     }
-  }, [user]);
+  }, [token]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
+  // Load Grades when Mediums change
+  useEffect(() => {
+      if (token && selectedMediums.length > 0) {
+          getGradesbyMedium(token, { medium_id: selectedMediums.map(String) }).then(data => {
+              if (data) setGradeOptions(data);
+          }).catch(err => console.error("Failed to fetch grades", err));
+      } else {
+          setGradeOptions([]);
+      }
+  }, [token, selectedMediums]);
 
-    const fullMediums = MOCK_MEDIUMS.filter(m => selectedMediums.includes(m.id));
-    const fullGrades = MOCK_GRADES.filter(g => selectedGrades.includes(g.id));
-    const fullSubjects = MOCK_SUBJECTS.filter(s => selectedSubjects.includes(s.id));
+  // Load Subjects when Grades change
+  useEffect(() => {
+      if (token && selectedGrades.length > 0) {
+          getSubjects(token, { grade_id: selectedGrades.map(String) }).then(data => {
+              if (data) setSubjectOptions(data);
+          }).catch(err => console.error("Failed to fetch subjects", err));
+      } else {
+          setSubjectOptions([]);
+      }
+  }, [token, selectedGrades]);
 
-    const newId = profileId || Math.floor(Math.random() * 1000) + 10;
 
-    const updatedProfile: TeacherProfile = {
-        id: newId,
-        user: user,
-        verified: profileId ? (stateManager.getTeacherProfile(user.id)?.verified || false) : false,
-        bio,
-        min_salary: minSalary,
-        experience_years: experience,
-        gender,
-        teaching_mode: teachingMode,
-        preferred_distance: distance,
-        highest_qualification: 'honours', 
-        mediums: fullMediums,
-        grades: fullGrades,
-        subjects: fullSubjects,
-        availability,
-        education: educationList,
-        qualifications: qualificationList,
-        profile_picture: stateManager.getTeacherProfile(user.id)?.profile_picture
+  // Load existing profile data
+  useEffect(() => {
+    const fetchData = async () => {
+        if (!token) return;
+        setLoading(true);
+        try {
+            // 1. Teacher Profile
+            const profileData = await getTeacherProfile(token);
+            const profile = Array.isArray(profileData) ? profileData[0] : profileData;
+            
+            if (profile) {
+                setProfileId(profile.id);
+                setBio(profile.bio);
+                setMinSalary(profile.min_salary);
+                setExperience(profile.experience_years);
+                setGender(profile.gender as Gender);
+                setTeachingMode(profile.teaching_mode as TeachingMode);
+                setDistance(profile.preferred_distance);
+                
+                setSelectedMediums(profile.medium?.map((m: any) => m.id) || []);
+                setSelectedGrades(profile.grade?.map((g: any) => g.id) || []);
+                setSelectedSubjects(profile.subject?.map((s: any) => s.id) || []);
+            }
+
+            // 2. Related Data (Education, Qualification, Slots)
+            const [eduRes, qualRes, slotRes] = await Promise.all([
+                getAcademicProfile(token),
+                getQualification(token),
+                getSlots(token)
+            ]);
+
+            if (eduRes) {
+                 const mappedEdu = eduRes.map((e: any) => ({
+                    id: e.id,
+                    institution: e.institution,
+                    degree: e.degree,
+                    year: e.graduation_year,
+                    result: e.results,
+                    certificate: e.certificates
+                }));
+                setEducationList(mappedEdu);
+                setInitialEducationIds(mappedEdu.map((e: any) => e.id));
+            }
+
+            if (qualRes) {
+                const mappedQual = qualRes.map((q: any) => ({
+                    id: q.id,
+                    organization: q.organization,
+                    skill: q.skill,
+                    year: q.year,
+                    result: q.results,
+                    certificate: q.certificates
+                }));
+                setQualificationList(mappedQual);
+                setInitialQualificationIds(mappedQual.map((q: any) => q.id));
+            }
+
+            if (slotRes) {
+                // Assuming slots come as array of objects compatible with AvailabilitySlot
+                setAvailability(slotRes);
+            }
+
+        } catch (error) {
+            console.error("Error fetching profile data", error);
+        } finally {
+            setLoading(false);
+        }
     };
+
+    if (token) {
+        fetchData();
+    }
+  }, [token]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token) {
+        toast.error("You must be logged in to save.");
+        return;
+    }
     
-    stateManager.updateTeacherProfile(updatedProfile);
-    alert("Profile updated successfully!");
-    push('dashboard');
+    setSubmitting(true);
+
+    const promise = (async () => {
+        const profileData = {
+            bio,
+            min_salary: minSalary,
+            experience_years: experience,
+            gender,
+            teaching_mode: teachingMode,
+            preferred_distance: distance,
+            medium: selectedMediums,
+            grade: selectedGrades,
+            subject: selectedSubjects,
+            highest_qualification: 'honours', 
+        };
+
+        let currentProfileId = profileId;
+
+        // 1. Create/Update Profile
+        if (profileId) {
+            await updateTeacher(token, String(profileId), profileData as any);
+        } else {
+            const newProfile = await createTeacher(token, profileData as any);
+            if (newProfile && newProfile.id) {
+                currentProfileId = newProfile.id;
+                setProfileId(currentProfileId);
+            }
+        }
+
+        if (!currentProfileId) {
+             throw new Error("Could not create profile ID.");
+        }
+
+        // 2. Availability
+        if (availability.length > 0) {
+            const availData = availability.map(a => ({
+                id: a.id,
+                start: a.start,
+                end: a.end,
+                days: a.days,
+                teacher: currentProfileId 
+            }));
+            await updateAvailability(token, String(currentProfileId), availData);
+        }
+
+        // 3. Education
+        const currentEduIds = educationList.map(e => e.id).filter(Boolean) as number[];
+        const eduToDelete = initialEducationIds.filter(id => !currentEduIds.includes(id));
+        for (const id of eduToDelete) {
+            await deleteAcademicProfile(token, String(id));
+        }
+
+        for (const edu of educationList) {
+             const formData = new FormData();
+             formData.append('institution', edu.institution);
+             formData.append('degree', edu.degree);
+             formData.append('graduation_year', edu.year);
+             formData.append('results', edu.result);
+             formData.append('teacher', String(currentProfileId));
+             
+             if (edu.certificate instanceof File) {
+                 formData.append('certificates', edu.certificate);
+             } 
+
+             if (edu.id) {
+                 await updateAcademicProfile(token, String(edu.id), formData);
+             } else {
+                 await submitAcademicProfiles(token, formData);
+             }
+        }
+
+        // 4. Qualification
+        const currentQualIds = qualificationList.map(q => q.id).filter(Boolean) as number[];
+        const qualToDelete = initialQualificationIds.filter(id => !currentQualIds.includes(id));
+        for (const id of qualToDelete) {
+             await deleteQualification(token, String(id));
+        }
+
+        for (const qual of qualificationList) {
+             const formData = new FormData();
+             formData.append('organization', qual.organization);
+             formData.append('skill', qual.skill);
+             formData.append('year', qual.year);
+             formData.append('results', qual.result);
+             formData.append('teacher', String(currentProfileId));
+
+             if (qual.certificate instanceof File) {
+                 formData.append('certificates', qual.certificate);
+             }
+
+             if (qual.id) {
+                 await updateQualification(token, String(qual.id), formData);
+             } else {
+                 await submitQualification(token, formData);
+             }
+        }
+    })();
+
+    toast.promise(promise, {
+        loading: 'Saving profile...',
+        success: 'Profile updated successfully!',
+        error: (err) => `Failed to update: ${err.message || 'Unknown error'}`
+    })
+    .then(() => {
+        push('dashboard');
+    })
+    .finally(() => {
+        setSubmitting(false);
+    });
   };
+
+  if(!session && !user) {
+      return (
+        <div className="flex flex-col items-center justify-center p-10 bg-gray-50 rounded-lg">
+             <h2 className="text-xl font-bold text-gray-800">Please Sign In</h2>
+             <p className="text-gray-600 mt-2">You need to be logged in to edit your profile.</p>
+        </div>
+      );
+  }
+
+  // Pass loaded options to MultiSelect
+  const mappedMediums = mediumOptions.map(m => ({id: m.id, name: m.name}));
+  const mappedGrades = gradeOptions.map(g => ({id: g.id, name: g.name}));
+  const mappedSubjects = subjectOptions.map(s => ({id: s.id, name: s.name}));
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8 bg-white p-6 rounded-lg shadow-sm border border-gray-200">
       
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 border-b pb-2">Edit Teacher Profile</h1>
+        <h1 className="text-2xl font-bold text-gray-900 border-b pb-2">
+            {profileId ? 'Edit Teacher Profile' : 'Create Teacher Profile'}
+        </h1>
         <p className="text-gray-500 mt-2">Update your information to attract the right students.</p>
       </div>
 
+      {loading && !profileId && !mediumOptions.length ? (
+          <div className="flex justify-center p-10"><Loader2 className="animate-spin text-indigo-600 w-8 h-8" /></div>
+      ) : (
+      <>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-6">
           <div>
@@ -192,7 +411,7 @@ const TeacherProfileForm: React.FC = () => {
         <div className="space-y-6">
             <MultiSelect 
                 label="Preferred Mediums"
-                options={MOCK_MEDIUMS}
+                options={mappedMediums} 
                 selectedIds={selectedMediums}
                 onChange={setSelectedMediums}
                 placeholder="Search Mediums..."
@@ -200,7 +419,7 @@ const TeacherProfileForm: React.FC = () => {
 
             <MultiSelect 
                 label="Classes / Grades"
-                options={MOCK_GRADES}
+                options={mappedGrades}
                 selectedIds={selectedGrades}
                 onChange={setSelectedGrades}
                 placeholder="Search Classes..."
@@ -208,7 +427,7 @@ const TeacherProfileForm: React.FC = () => {
 
             <MultiSelect 
                 label="Subjects"
-                options={MOCK_SUBJECTS}
+                options={mappedSubjects}
                 selectedIds={selectedSubjects}
                 onChange={setSelectedSubjects}
                 placeholder="Search Subjects..."
@@ -229,12 +448,15 @@ const TeacherProfileForm: React.FC = () => {
       <div className="flex justify-end pt-4">
         <button
           type="submit"
-          className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          disabled={submitting}
+          className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-all"
         >
-          <Save className="w-5 h-5 mr-2" />
+          {submitting ? <Loader2 className="animate-spin w-5 h-5 mr-2" /> : <Save className="w-5 h-5 mr-2" />}
           {profileId ? 'Update Profile' : 'Create Profile'}
         </button>
       </div>
+      </>
+      )}
     </form>
   );
 };

@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { JobPost } from '../types';
 import { MapPin, DollarSign, BookOpen, Clock, Users } from 'lucide-react';
 import { useAuth } from '../lib/auth';
@@ -18,6 +18,11 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onUpdate }) => {
   const { user } = useAuth();
   const { push } = useRouter();
   const [isBidModalOpen, setIsBidModalOpen] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const timeAgo = (dateString: string) => {
     const date = new Date(dateString);
@@ -41,7 +46,9 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onUpdate }) => {
             <h3 className="text-lg font-semibold text-gray-900 leading-tight hover:text-indigo-600 transition-colors">{job.title}</h3>
             <p className="text-sm text-gray-500 mt-1">Posted by {job.posted_by.first_name} {job.posted_by.last_name}</p>
           </div>
-          <span className="text-sm text-gray-400 whitespace-nowrap">{timeAgo(job.created_at)}</span>
+          <span className="text-sm text-gray-400 whitespace-nowrap">
+            {isClient ? timeAgo(job.created_at) : new Date(job.created_at).toLocaleDateString()}
+          </span>
         </div>
 
         <p className="text-gray-600 text-sm line-clamp-3 mb-4">

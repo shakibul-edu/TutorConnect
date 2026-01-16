@@ -10,8 +10,8 @@ interface AvailabilityProps {
 }
 
 const Availability: React.FC<AvailabilityProps> = ({ slots, setSlots }) => {
-  const updateSlot = (i: number, next: AvailabilitySlot) =>
-    setSlots(slots.map((s, idx) => (idx === i ? next : s)));
+  const updateSlot = (i: number, next: Partial<AvailabilitySlot>) =>
+    setSlots(slots.map((s, idx) => (idx === i ? { ...s, ...next } : s)));
 
   const addSlot = () =>
     setSlots([...slots, { start: "16:00", end: "21:00", days: [] }]);

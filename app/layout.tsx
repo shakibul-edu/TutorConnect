@@ -5,6 +5,8 @@ import { AuthProvider } from '../lib/auth';
 import { ToastProvider } from '../lib/toast';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import GoogleOneTap from '../components/GoogleOneTap';
+import SessionProviderWrapper from '../lib/SessionProvider';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -24,17 +26,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         `}} />
       </head>
       <body className={inter.className}>
-        <AuthProvider>
-          <ToastProvider>
+        <SessionProviderWrapper>
+          <AuthProvider>
+            <ToastProvider>
+              <GoogleOneTap />
               <div className="min-h-screen bg-gray-50 flex flex-col">
-                  <Navbar />
-                  <main className="flex-grow">
-                      {children}
-                  </main>
-                  <Footer />
+                <Navbar />
+                <main className="flex-grow">
+                  {children}
+                </main>
+                <Footer />
               </div>
-          </ToastProvider>
-        </AuthProvider>
+            </ToastProvider>
+          </AuthProvider>
+        </SessionProviderWrapper>
       </body>
     </html>
   );

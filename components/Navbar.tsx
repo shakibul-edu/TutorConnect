@@ -4,6 +4,7 @@
 import React, { useState } from 'react';
 import { Link, usePathname, useRouter } from '../lib/router';
 import { useAuth } from '../lib/auth';
+import { useSession, signOut } from 'next-auth/react';
 import { 
   GraduationCap, 
   Bell, 
@@ -20,12 +21,27 @@ import PostJobModal from './PostJobModal';
 
 const Navbar: React.FC = () => {
   const { user, logout, openAuthModal, toggleUserMode } = useAuth();
+  const { data: session } = useSession();
   const pathname = usePathname();
   const { push } = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isPostJobModalOpen, setIsPostJobModalOpen] = useState(false);
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
+
+  // Display session user if available, otherwise fall back to app user
+  const displayUser = session?.user || user;
+  const displayName = displayUser?.name || (user ? `${user.first_name} ${user.last_name}` : '');
+  const displayEmail = displayUser?.email || user?.email || '';
+  const displayImage = displayUser?.image || '';
+
+  const handleLogout = async () => {
+    // Sign out from NextAuth
+    await signOut({ redirect: false });
+    // Also call app's logout
+    logout();
+    closeMobileMenu();
+  };
 
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm">
@@ -58,11 +74,11 @@ const Navbar: React.FC = () => {
           </div>
           
           <div className="hidden md:flex items-center gap-4">
-            {user ? (
+            {displayUser ? (
               <>
                 <div className="flex items-center bg-gray-50 rounded-full px-3 py-1 border border-gray-200">
-                  <span className={`text-[10px] font-bold uppercase tracking-widest ${user.is_teacher ? 'text-indigo-600' : 'text-blue-600'}`}>
-                    {user.is_teacher ? 'Tutor Mode' : 'Finder Mode'}
+                  <span className={`text-[10px] font-bold uppercase tracking-widest ${user?.is_teacher ? 'text-indigo-600' : 'text-blue-600'}`}>
+                    {user?.is_teacher ? 'Tutor Mode' : 'Finder Mode'}
                   </span>
                 </div>
 
@@ -71,7 +87,7 @@ const Navbar: React.FC = () => {
                   <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
                 </button>
 
-                 {user.is_teacher ? (
+                 {user?.is_teacher ? (
                    <button 
                      onClick={() => push('profile-edit')}
                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
@@ -90,15 +106,24 @@ const Navbar: React.FC = () => {
 
                 <div className="relative group">
                    <button className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900 focus:outline-none">
-                     <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold border ${user.is_teacher ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-blue-100 text-blue-700 border-blue-200'}`}>
-                       {user.first_name[0]}
-                     </span>
+                     {displayImage ? (
+                       <img 
+                         src={displayImage} 
+                         alt="User" 
+                         className="w-8 h-8 rounded-full border border-gray-200" 
+                       />
+                     ) : (
+                       <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold border ${user?.is_teacher ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-blue-100 text-blue-700 border-blue-200'}`}>
+                         {displayName[0] || 'U'}
+                       </span>
+                     )}
                    </button>
                    {/* Dropdown */}
-                   <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 ring-1 ring-black ring-opacity-5 hidden group-hover:block border border-gray-100">
+                   <div className="absolute right-0 top-full pt-2 w-56 hidden group-hover:block">
+                     <div className="bg-white rounded-md shadow-lg py-1 ring-1 ring-black ring-opacity-5 border border-gray-100">
                      <div className="px-4 py-2 border-b border-gray-50">
                         <p className="text-xs font-semibold text-gray-400 uppercase">Manage Account</p>
-                        <p className="text-sm font-bold text-gray-900 truncate">{user.first_name} {user.last_name}</p>
+                        <p className="text-sm font-bold text-gray-900 truncate">{displayName}</p>
                      </div>
                      <button onClick={() => push('dashboard')} className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left font-medium">
                         <LayoutDashboard className="w-4 h-4 text-gray-400" />
@@ -109,18 +134,21 @@ const Navbar: React.FC = () => {
                         Edit Profile
                      </button>
                      <div className="border-t border-gray-100 my-1"></div>
-                     <button 
-                        onClick={toggleUserMode} 
-                        className={`flex items-center gap-2 px-4 py-2 text-sm w-full text-left font-bold ${user.is_teacher ? 'text-blue-600 hover:bg-blue-50' : 'text-indigo-600 hover:bg-indigo-50'}`}
-                      >
-                        <RefreshCw className="w-4 h-4" />
-                        Switch to {user.is_teacher ? 'Finder' : 'Tutor'} Mode
-                     </button>
+                     {user && (
+                       <button 
+                          onClick={toggleUserMode} 
+                          className={`flex items-center gap-2 px-4 py-2 text-sm w-full text-left font-bold ${user.is_teacher ? 'text-blue-600 hover:bg-blue-50' : 'text-indigo-600 hover:bg-indigo-50'}`}
+                        >
+                          <RefreshCw className="w-4 h-4" />
+                          Switch to {user.is_teacher ? 'Finder' : 'Tutor'} Mode
+                       </button>
+                     )}
                      <div className="border-t border-gray-100 my-1"></div>
-                     <button onClick={logout} className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left font-medium">
+                     <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left font-medium">
                         <LogOut className="w-4 h-4 text-red-400" />
                         Sign out
                      </button>
+                     </div>
                    </div>
                 </div>
               </>
@@ -214,19 +242,27 @@ const Navbar: React.FC = () => {
           )}
 
           <div className="pt-4 pb-4 border-t border-gray-200">
-            {user ? (
+            {displayUser ? (
               <div className="flex items-center px-4">
                 <div className="flex-shrink-0">
-                  <div className={`h-10 w-10 rounded-full flex items-center justify-center font-bold border ${user.is_teacher ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-blue-100 text-blue-700 border-blue-200'}`}>
-                    {user.first_name[0]}
-                  </div>
+                  {displayImage ? (
+                    <img 
+                      src={displayImage} 
+                      alt="User" 
+                      className="h-10 w-10 rounded-full border border-gray-200" 
+                    />
+                  ) : (
+                    <div className={`h-10 w-10 rounded-full flex items-center justify-center font-bold border ${user?.is_teacher ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-blue-100 text-blue-700 border-blue-200'}`}>
+                      {displayName[0] || 'U'}
+                    </div>
+                  )}
                 </div>
                 <div className="ml-3">
-                  <div className="text-base font-medium text-gray-800">{user.first_name} {user.last_name}</div>
-                  <div className="text-sm font-medium text-gray-500">{user.email}</div>
+                  <div className="text-base font-medium text-gray-800">{displayName}</div>
+                  <div className="text-sm font-medium text-gray-500">{displayEmail}</div>
                 </div>
                 <button 
-                  onClick={() => { logout(); closeMobileMenu(); }}
+                  onClick={handleLogout}
                   className="ml-auto flex-shrink-0 bg-white p-1 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none"
                 >
                   <LogOut className="h-6 w-6" />
