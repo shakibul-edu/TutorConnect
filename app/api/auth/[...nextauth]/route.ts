@@ -1,159 +1,178 @@
-
-import NextAuth from "next-auth";
+import NextAuth, { type NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { OAuth2Client } from "google-auth-library";
+import type { JWT } from "next-auth/jwt";
 
-// Function to refresh Google access token
-async function refreshGoogleToken(refreshToken: string) {
-  try {
-    const response = await fetch("https://oauth2.googleapis.com/token", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({
-        client_id: process.env.GOOGLE_ID as string,
-        client_secret: process.env.GOOGLE_SECRET as string,
-        grant_type: "refresh_token",
-        refresh_token: refreshToken,
-      }).toString(),
-    });
+const client = new OAuth2Client(process.env.GOOGLE_ID);
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || "Token refresh failed");
-    }
-
-    return data;
-  } catch (error) {
-    console.error("Google token refresh error:", error);
-    throw error;
+declare module "next-auth" {
+  interface User {
+    idToken?: string;
+    backendAccess?: string;
+    backendRefresh?: string;
   }
 }
 
-export const authOptions = {
+declare module "next-auth/jwt" {
+  interface JWT {
+    idToken?: string;
+    backendAccess?: string;
+    backendRefresh?: string;
+  }
+}
+
+declare module "next-auth" {
+  interface Session {
+    idToken?: string;
+    backendAccess?: string;
+    backendRefresh?: string;
+  }
+}
+
+export const authOptions: NextAuthOptions = {
   providers: [
     GoogleProvider({
-      clientId: process.env.GOOGLE_ID as string,
-      clientSecret: process.env.GOOGLE_SECRET as string,
+      clientId: process.env.GOOGLE_ID!,
+      clientSecret: process.env.GOOGLE_SECRET!,
       authorization: {
         params: {
           prompt: "consent",
           access_type: "offline",
-          response_type: "code",
-        },
-      },
+          response_type: "code"
+        }
+      }
     }),
+    
     CredentialsProvider({
-      id: "googleonetap",
+      id: "google-onetap",
       name: "Google One Tap",
       credentials: {
         credential: { type: "text" },
       },
       async authorize(credentials) {
-        const idToken = credentials?.credential;
-        if (!idToken) return null;
+        const token = credentials?.credential;
+        if (!token) {
+          console.error('❌ No credential provided');
+          return null;
+        }
 
         try {
-          const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
-          const payload = await response.json();
-
-          if (!response.ok) {
-            console.error("Token verification failed:", payload);
-            throw new Error(payload.error_description || "Token verification failed");
+          console.log('🔄 Verifying Google ID token');
+          const ticket = await client.verifyIdToken({
+            idToken: token,
+            audience: process.env.GOOGLE_ID,
+          });
+          
+          const payload = ticket.getPayload();
+          if (!payload) {
+            console.error('❌ No payload in token');
+            return null;
           }
 
-          // Verify Audience matches Google Client ID
-          if (payload.aud !== process.env.GOOGLE_ID) {
-            console.error("Audience mismatch:", payload.aud);
-            throw new Error("Invalid audience");
+          console.log('✅ Google token verified successfully');
+          
+          // Send ID token to backend to get JWT tokens
+          const backendUrl = process.env.BASE_URL || 'http://127.0.0.1:8000';
+          try {
+            console.log(`🔄 Exchanging token with backend: ${backendUrl}/auth/google/`);
+            const backendRes = await fetch(`${backendUrl}/auth/google/`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+            });
+
+            if (backendRes.ok) {
+              const backendData = await backendRes.json();
+              console.log('✅ Backend tokens retrieved');
+              return {
+                id: payload.sub,
+                email: payload.email,
+                name: payload.name,
+                image: payload.picture,
+                idToken: token,
+                backendAccess: backendData.access,
+                backendRefresh: backendData.refresh,
+              };
+            } else {
+              console.error('⚠️ Backend token exchange failed, proceeding without backend tokens');
+            }
+          } catch (backendError) {
+            console.error('⚠️ Backend request failed:', backendError);
           }
 
-          // Return user object with id_token for JWT callback
+          // Return user even if backend fails
           return {
             id: payload.sub,
-            name: payload.name,
             email: payload.email,
+            name: payload.name,
             image: payload.picture,
-            id_token: idToken, // Custom property to pass to token
+            idToken: token,
           };
         } catch (error) {
-          console.error("Google One Tap Auth Error:", error);
+          console.error('❌ Error verifying Google token:', error);
           return null;
         }
       },
     }),
   ],
-  session: {
-    strategy: "jwt" as const,
-  },
-  secret: process.env.NEXTAUTH_SECRET,
+
+  session: { strategy: "jwt" as const },
+
   callbacks: {
-    async jwt({ token, account, user }: any) {
-      // Initial sign in - store tokens and expiration
-      if (account && user) {
-        if (account.provider === "google") {
-          token.id_token = account.id_token;
-          token.access_token = account.access_token;
-          token.refresh_token = account.refresh_token;
-          token.expires_at = account.expires_at || Math.floor(Date.now() / 1000) + 3600; // 1 hour default
-        } else if (account.provider === "googleonetap") {
-          token.id_token = user.id_token;
-        }
+    async jwt({ token, user, account }) {
+      // Initial sign in
+      if (user) {
+        token.idToken = user.idToken;
+        token.backendAccess = user.backendAccess;
+        token.backendRefresh = user.backendRefresh;
       }
 
-      // Check if token needs refresh (if expired or within 5 minutes of expiry)
-      if (token.expires_at && typeof token.expires_at === 'number') {
-        const now = Math.floor(Date.now() / 1000);
-        const timeUntilExpiry = token.expires_at - now;
-
-        // Refresh if expired or within 5 minutes of expiring
-        if (timeUntilExpiry < 300) {
-          // If we don't have a refresh token (e.g. Google One Tap), we can't refresh
-          if (!token.refresh_token) {
-            console.log("Token expiring and no refresh token available. Marking as expired.");
-            token.error = "AccessTokenExpired";
-            return token;
+      // For Google OAuth flow (not One Tap)
+      if (account?.provider === "google" && account?.id_token) {
+        token.idToken = account.id_token;
+        
+        // Exchange Google ID token for backend JWT
+        const backendUrl = process.env.BASE_URL || 'http://127.0.0.1:8000';
+        try {
+          const backendRes = await fetch(`${backendUrl}/api/token/`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${account.id_token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+          const res = await backendRes.json();
+          console.log('✅ Backend tokens retrieved via OAuth flow');
+          if (backendRes.ok) {
+            const backendData = await backendRes.json();
+            token.backendAccess = backendData.access;
+            token.backendRefresh = backendData.refresh;
           }
-
-          try {
-            if (token.refresh_token) {
-              const newTokenData = await refreshGoogleToken(token.refresh_token as string);
-              token.access_token = newTokenData.access_token;
-              token.id_token = newTokenData.id_token || token.id_token;
-              token.expires_at = Math.floor(Date.now() / 1000) + (newTokenData.expires_in || 3600);
-              // Update refresh token if a new one is returned (rotation)
-              if (newTokenData.refresh_token) {
-                token.refresh_token = newTokenData.refresh_token;
-              }
-              console.log('Token refreshed successfully');
-              // Clear any previous errors
-              delete token.error;
-            }
-          } catch (error) {
-            console.error('Failed to refresh token:', error);
-            token.error = 'RefreshAccessTokenError';
-          }
+        } catch (error) {
+          console.error('⚠️ Backend token exchange failed:', error);
         }
       }
 
       return token;
     },
-    async session({ session, token }: any) {
-      // Check for refresh errors or expiration
-      if (token.error === 'RefreshAccessTokenError' || token.error === 'AccessTokenExpired') {
-        session.error = token.error;
-      }
 
-      // Pass id_token to the client session so it can be used for API calls
-      session.id_token = token.id_token;
-      session.access_token = token.access_token;
+    async session({ session, token }) {
+      session.idToken = token.idToken;
+      session.backendAccess = token.backendAccess;
+      session.backendRefresh = token.backendRefresh;
       return session;
     },
   },
+
+  pages: {
+    signIn: '/',
+  },
+
+  secret: process.env.NEXTAUTH_SECRET,
 };
 
 const handler = NextAuth(authOptions);
-
 export { handler as GET, handler as POST };

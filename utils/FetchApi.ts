@@ -1,5 +1,6 @@
 
 import { toast } from "../lib/toast";
+import { getSession } from "next-auth/react";
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 
@@ -9,10 +10,18 @@ export interface FetchApiOptions {
     body?: any;
     params?: Record<string, string | number>;
     isFormData?: boolean;
+    skipAuth?: boolean;
 }
 
 export class FetchApi {
     private static baseUrl: string = process.env.NEXT_PUBLIC_BASE_URL || process.env.BASE_URL || 'http://127.0.0.1:8000';
+
+    private static async getAuthToken(): Promise<string | null> {
+        if (typeof window === 'undefined') return null;
+        
+        const session = await getSession();
+        return session?.backendAccess || null;
+    }
 
     private static buildEndpointUrl(endpoint: string): string {
         return `${this.baseUrl}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
@@ -28,16 +37,23 @@ export class FetchApi {
         endpoint: string,
         options: FetchApiOptions = {}
     ): Promise<T> {
-        const { method = 'GET', headers = {}, body, params, isFormData = false } = options;
+        const { method = 'GET', headers = {}, body, params, isFormData = false, skipAuth = false } = options;
         const url = this.buildEndpointUrl(endpoint);
         const fetchUrl = this.buildUrl(url, params);
 
+        const authHeaders: Record<string, string> = { ...headers };
+        if (!skipAuth) {
+            const token = await this.getAuthToken();
+            if (token) {
+                authHeaders['Authorization'] = `Bearer ${token}`;
+            }
+        }
 
         const fetchOptions: RequestInit = {
             method,
-            headers: isFormData ? {...headers } : {
+            headers: isFormData ? { ...authHeaders } : {
             'Content-Type': 'application/json',
-            ...headers,
+            ...authHeaders,
             },
         };
 

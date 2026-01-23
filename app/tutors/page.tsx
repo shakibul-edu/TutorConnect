@@ -10,7 +10,8 @@ import { getTeachers } from '../../services/backend';
 import { useSession } from 'next-auth/react';
 
 const TutorsPage: React.FC = () => {
-    const { data: session } = useSession();
+    const { data: session, status } = useSession();
+    
   const [showMobileFilter, setShowMobileFilter] = useState(false);
     const [tutors, setTutors] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
@@ -25,13 +26,21 @@ const TutorsPage: React.FC = () => {
 
     const fetchTutors = async (appliedFilters: any = {}) => {
         setLoading(true);
-        const idToken = (session as any)?.id_token;
-        if (!idToken) {
+
+        // Wait for authenticated session before calling backend
+        if (status !== 'authenticated') {
+            setLoading(false);
+            return;
+        }
+
+        const backendAccess = (session as any)?.backendAccess;
+        if (!backendAccess) {
+            console.warn('No backend access token available yet');
             setLoading(false);
             return;
         }
         try {
-            const response = await getTeachers(idToken, appliedFilters);
+            const response = await getTeachers(backendAccess, appliedFilters);
             if (response) {
                 setTutors(Array.isArray(response) ? response : response.results || []);
             }
@@ -45,7 +54,7 @@ const TutorsPage: React.FC = () => {
 
     useEffect(() => {
         fetchTutors();
-    }, [session]);
+    }, [session, status]);
 
     const handleApplyFilter = (newFilters: FilterState) => {
         setFilters(newFilters);

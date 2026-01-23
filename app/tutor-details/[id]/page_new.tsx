@@ -6,6 +6,7 @@ import { useRouter } from '../../../lib/router';
 import { useSession } from 'next-auth/react';
 import { ArrowLeft, ShieldCheck, GraduationCap, MapPin, Calendar, Clock, Award, BookOpen, CheckCircle, XCircle } from 'lucide-react';
 import { getTeacherFullProfile } from '../../../services/backend';
+import { getBackendImageUrl } from '../../../utils/imageHelper';
 
 export default function TutorDetailsPage() {
     const params = useParams();
@@ -83,7 +84,7 @@ export default function TutorDetailsPage() {
                 <div className="px-8 pb-8">
                     <div className="flex flex-col md:flex-row items-start md:items-end -mt-12 mb-6 gap-6">
                         <img 
-                            src={teacher_profile.profile_picture ? `${process.env.BASE_URL || ''}${teacher_profile.profile_picture}` : `https://ui-avatars.com/api/?name=Tutor`} 
+                            src={getBackendImageUrl(teacher_profile.profile_picture)} 
                             alt="Profile" 
                             className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-md bg-white"
                         />

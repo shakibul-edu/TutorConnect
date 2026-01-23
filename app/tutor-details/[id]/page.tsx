@@ -6,6 +6,7 @@ import { useRouter } from '../../../lib/router';
 import { useSession } from 'next-auth/react';
 import { ArrowLeft, ShieldCheck, Clock, FileText, CheckCircle, XCircle, User, MapPin, DollarSign, Briefcase, Users } from 'lucide-react';
 import { getTeacherFullProfile } from '../../../services/backend';
+import { getBackendImageUrl } from '../../../utils/imageHelper';
 
 export default function TutorDetailsPage() {
     const params = useParams();
@@ -85,7 +86,7 @@ export default function TutorDetailsPage() {
                         <div className="flex-shrink-0">
                             <div className="w-24 h-24 rounded-full bg-white flex items-center justify-center shadow-lg overflow-hidden">
                                {teacher_profile.profile_picture ? (
-                                   <img src={teacher_profile.profile_picture.startsWith('http') ? teacher_profile.profile_picture : `${process.env.NEXT_PUBLIC_API_URL}${teacher_profile.profile_picture}`} alt="Profile" className="w-24 h-24 rounded-full object-cover" />
+                                   <img src={getBackendImageUrl(teacher_profile.profile_picture)} alt="Profile" className="w-24 h-24 rounded-full object-cover" />
                                ) : (
                                    <User className="w-12 h-12 text-indigo-600" />
                                )}       

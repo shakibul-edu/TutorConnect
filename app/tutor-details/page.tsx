@@ -4,6 +4,7 @@ import { stateManager } from '../../services/stateManager';
 import { useRouter } from '../../lib/router';
 import { MapPin, Star, GraduationCap, ArrowLeft, Mail, BookOpen, Clock, Award, ShieldCheck } from 'lucide-react';
 import { MOCK_TEACHERS } from '../../services/mockData';
+import { getBackendImageUrl } from '../../utils/imageHelper';
 
 export default function TutorDetailsPage({ id }: { id: string }) {
     const { push } = useRouter();
@@ -36,7 +37,7 @@ export default function TutorDetailsPage({ id }: { id: string }) {
                 <div className="px-8 pb-8">
                     <div className="flex flex-col md:flex-row items-start md:items-end -mt-12 mb-6 gap-6">
                         <img 
-                            src={tutor.profile_picture || `https://ui-avatars.com/api/?name=${tutor.user.first_name}`} 
+                            src={getBackendImageUrl(tutor.profile_picture)} 
                             alt={tutor.user.username} 
                             className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-md bg-white"
                         />

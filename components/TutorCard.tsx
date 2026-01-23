@@ -6,6 +6,7 @@ import { TeacherProfile, TeacherType } from '../types';
 import { MapPin, Star, CheckCircle, School, Flag, Wifi } from 'lucide-react';
 import { stateManager } from '../services/stateManager';
 import { useRouter } from '../lib/router';
+import { getBackendImageUrl } from '../utils/imageHelper';
 
 interface TutorCardProps {
   tutor: TeacherType;
@@ -33,7 +34,7 @@ export const TutorCard: React.FC<TutorCardProps> = ({ tutor }) => {
         {/* Header Section */}
         <div className="flex items-start gap-4 mb-4 border-b border-gray-50 pb-4">
           <img 
-            src={tutor.profile_picture || '/default-profile.png'} 
+            src={getBackendImageUrl(tutor.profile_picture)} 
             alt={tutor.name} 
             className="w-16 h-16 rounded-full object-cover border-2 border-indigo-50"
           />

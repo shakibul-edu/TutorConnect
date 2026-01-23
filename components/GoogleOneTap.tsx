@@ -2,10 +2,12 @@
 
 import Script from 'next/script';
 import { signIn, useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
 
 const GoogleOneTap = () => {
   const { status } = useSession();
+  const router = useRouter();
   const [scriptLoaded, setScriptLoaded] = useState(false);
   const initRef = useRef(false);
 
@@ -25,12 +27,15 @@ const GoogleOneTap = () => {
           client_id: clientId,
           callback: async (response: any) => {
             try {
-              const result = await signIn('googleonetap', {
+              console.log('📤 One Tap response received');
+              const result = await signIn('google-onetap', {
                 credential: response.credential,
                 redirect: false,
               });
+              console.log('📨 SignIn result:', result);
               if (result?.ok) {
-                window.location.reload();
+                console.log('✅ Sign-in successful, redirecting to dashboard');
+                router.push('/dashboard');
               } else {
                 console.error('❌ Google One Tap: Sign in failed', result?.error);
               }
@@ -56,7 +61,7 @@ const GoogleOneTap = () => {
         initRef.current = false;
       };
     }
-  }, [status, scriptLoaded]);
+  }, [status, scriptLoaded, router]);
 
   if (status !== 'unauthenticated') {
     return null;
