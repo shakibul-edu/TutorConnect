@@ -96,8 +96,8 @@ const Sidebar: React.FC<SidebarProps> = ({ onApplyFilter, className = "" }) => {
                     type="radio"
                     name="gender"
                     className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
-                    checked={gender === g}
-                    onChange={() => setGender(g)}
+                    checked={gender === g.toLocaleLowerCase()}
+                    onChange={() => setGender(g.toLocaleLowerCase())}
                 />
                 <span className="ml-2 text-sm text-gray-700">{g}</span>
                 </label>

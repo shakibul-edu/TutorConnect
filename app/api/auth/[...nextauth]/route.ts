@@ -144,15 +144,39 @@ export const authOptions: NextAuthOptions = {
               'Content-Type': 'application/json',
             },
           });
-          const res = await backendRes.json();
-          console.log('✅ Backend tokens retrieved via OAuth flow');
+
           if (backendRes.ok) {
             const backendData = await backendRes.json();
+            console.log('✅ Backend tokens retrieved via OAuth flow');
             token.backendAccess = backendData.access;
             token.backendRefresh = backendData.refresh;
+          } else {
+            console.error('⚠️ Backend token exchange failed with status', backendRes.status);
           }
         } catch (error) {
           console.error('⚠️ Backend token exchange failed:', error);
+        }
+      }
+
+      // Refresh backend access token using refresh token when available
+      if (!token.backendAccess && token.backendRefresh) {
+        const backendUrl = process.env.BASE_URL || 'http://127.0.0.1:8000';
+        try {
+          const refreshRes = await fetch(`${backendUrl}/api/token/refresh/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refresh: token.backendRefresh }),
+          });
+
+          if (refreshRes.ok) {
+            const refreshed = await refreshRes.json();
+            token.backendAccess = refreshed.access;
+            token.backendRefresh = refreshed.refresh || token.backendRefresh;
+          } else {
+            console.error('⚠️ Backend refresh failed with status', refreshRes.status);
+          }
+        } catch (error) {
+          console.error('⚠️ Backend refresh failed:', error);
         }
       }
 

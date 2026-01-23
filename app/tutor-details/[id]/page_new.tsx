@@ -12,19 +12,26 @@ export default function TutorDetailsPage() {
     const params = useParams();
     const id = params?.id as string;
     const { push } = useRouter();
-    const { data: session } = useSession();
+    const { data: session, status } = useSession();
     const [profileData, setProfileData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchProfile = async () => {
-            const idToken = (session as any)?.id_token;
-            if (!idToken || !id) {
+            if (status !== 'authenticated' || !id) {
                 setLoading(false);
                 return;
             }
+
+            const backendAccess = (session as any)?.backendAccess;
+            if (!backendAccess) {
+                console.warn('No backend access token available yet');
+                setLoading(false);
+                return;
+            }
+
             try {
-                const response = await getTeacherFullProfile(idToken, id);
+                const response = await getTeacherFullProfile(backendAccess, id);
                 if (response) {
                     setProfileData(response);
                 }
@@ -36,7 +43,7 @@ export default function TutorDetailsPage() {
         };
 
         fetchProfile();
-    }, [session, id]);
+    }, [session, status, id]);
 
     if (loading) {
         return (

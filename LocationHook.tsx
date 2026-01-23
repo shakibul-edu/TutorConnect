@@ -11,7 +11,7 @@ interface LocationPosition {
 const useLocation = (session: any) => {
     const [location, setLocationState] = useState<LocationPosition | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const idToken = session?.id_token;
+    const backendAccess = (session as any)?.backendAccess;
 
     // Helper to calculate distance in KM
     const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -28,10 +28,10 @@ const useLocation = (session: any) => {
 
     // 1. Initial Sync: Fetch server location to set baseline
     useEffect(() => {
-        if (!idToken) return;
+        if (!backendAccess) return;
         const syncServerLocation = async () => {
             try {
-                const serverLoc = await getLocation(idToken);
+                const serverLoc = await getLocation(backendAccess);
                 if (serverLoc) {
                     const locData = { 
                         latitude: serverLoc.latitude, 
@@ -45,11 +45,11 @@ const useLocation = (session: any) => {
             }
         };
         syncServerLocation();
-    }, [idToken]);
+    }, [backendAccess]);
 
     // 2. Track Position & Update Logic
     useEffect(() => {
-        if (!idToken) return;
+        if (!backendAccess) return;
         if (!navigator.geolocation) {
             setError('Geolocation is not supported by your browser');
             return;
@@ -78,19 +78,25 @@ const useLocation = (session: any) => {
 
                         // Threshold check: 0.2km
                         if (distance > 0.2) {
-                            // Pause watcher logic or debounce could be handled here if needed, 
-                            // but confirm() blocks execution in main thread usually.
-                            const shouldUpdate = window.confirm("Your location has changed by more than 0.2km. Do you want to update it on the server?");
-                            
-                            if (shouldUpdate) {
-                                const locationString = `${latitude},${longitude},${accuracy.toFixed(2)}`;
-                                await setLocation(idToken, locationString);
-                                // Update local baseline to current
-                                localStorage.setItem('user_location', JSON.stringify(newLocation));
+                            // Build location string as "lat,lon,acc" (PostGIS order requirement with accuracy)
+                            const locationString = `${latitude},${longitude},${accuracy.toFixed(2)}`;
+
+                            // First attempt without update param (backend will respond with update_required if needed)
+                            const resp = await setLocation(backendAccess, locationString);
+
+                            if (resp?.update_required) {
+                                const shouldUpdate = window.confirm(
+                                    `New location is ${resp.distance_km ?? '0'} km away. Update on server?`
+                                );
+                                if (shouldUpdate) {
+                                    await setLocation(backendAccess, locationString, { update: 'true' });
+                                    localStorage.setItem('user_location', JSON.stringify(newLocation));
+                                } else {
+                                    // User declined; still update baseline locally to avoid repeated prompts
+                                    localStorage.setItem('user_location', JSON.stringify(newLocation));
+                                }
                             } else {
-                                // User denied update. Update local baseline anyway to prevent loop/spamming prompt?
-                                // If we don't update local, it will ask again on next movement.
-                                // It's better UX to assume "No" means "Don't ask me for this location change".
+                                // No update_required flag; consider it handled
                                 localStorage.setItem('user_location', JSON.stringify(newLocation));
                             }
                         }
@@ -114,7 +120,7 @@ const useLocation = (session: any) => {
         );
 
         return () => navigator.geolocation.clearWatch(geoId);
-    }, [idToken]);
+    }, [backendAccess]);
 
     return { location, error };
 };

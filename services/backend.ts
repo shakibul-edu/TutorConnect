@@ -150,7 +150,7 @@ export async function getSlots(token: string) {
 export async function createTeacher(token: string, data: FormType) {
     if (token) {
         try {
-            const response = await FetchApi.post("/teacher-profile/", data, { 'Authorization': `Bearer ${token}` }, {});
+            const response = await FetchApi.post("/teacher-profile/", data, { 'Authorization': `Bearer ${token}` }, {}, true);
             return response;
         } catch (error) {
             throw new Error((error as { message?: string } | any).message || "Error creating teacher");
@@ -164,7 +164,7 @@ export async function createTeacher(token: string, data: FormType) {
 export async function updateTeacher(token: string, id: string, data: FormType) {
     if (token) {
         try {
-            const response = await FetchApi.put(`/teacher-profile/${id}/`, data, { 'Authorization': `Bearer ${token}` });
+            const response = await FetchApi.put(`/teacher-profile/${id}/`, data, { 'Authorization': `Bearer ${token}` }, {}, true);
             return response;
         } catch (error) {
             throw new Error((error as { message?: string } | any).message || "Error creating teacher");

@@ -76,7 +76,7 @@ const TeacherProfileForm: React.FC = () => {
   
   // Helper to get token
   // @ts-ignore
-  const token = session?.id_token || (session as any)?.token; // Fallback
+  const token = (session as any)?.backendAccess;
 
   // Handle profile picture change
   const handleProfilePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -250,9 +250,9 @@ const TeacherProfileForm: React.FC = () => {
         profileData.append('gender', gender);
         profileData.append('teaching_mode', teachingMode);
         profileData.append('preferred_distance', String(distance));
-        profileData.append('medium', JSON.stringify(selectedMediums));
-        profileData.append('grade', JSON.stringify(selectedGrades));
-        profileData.append('subject', JSON.stringify(selectedSubjects));
+       selectedMediums.forEach(id => profileData.append('medium_list', String(id)));
+       selectedGrades.forEach(id => profileData.append('grade_list', String(id)));
+       selectedSubjects.forEach(id => profileData.append('subject_list', String(id)));
         profileData.append('highest_qualification', 'honours');
         
         if (profilePicture instanceof File) {
