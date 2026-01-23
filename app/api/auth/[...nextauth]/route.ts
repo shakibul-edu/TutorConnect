@@ -6,6 +6,47 @@ import type { JWT } from "next-auth/jwt";
 
 const client = new OAuth2Client(process.env.GOOGLE_ID);
 
+// Decode JWT exp for proactive refresh
+const decodeJwtExp = (jwt?: string): number | null => {
+  try {
+    if (!jwt) return null;
+    const [, payload] = jwt.split(".");
+    if (!payload) return null;
+    const decoded = JSON.parse(Buffer.from(payload, "base64").toString("utf8"));
+    return typeof decoded.exp === "number" ? decoded.exp : null;
+  } catch (err) {
+    console.error("⚠️ Failed to decode JWT exp", err);
+    return null;
+  }
+};
+
+const isBackendTokenExpiring = (jwt?: string, skewSeconds = 60) => {
+  const exp = decodeJwtExp(jwt);
+  if (!exp) return false;
+  const now = Math.floor(Date.now() / 1000);
+  return now >= exp - skewSeconds;
+};
+
+const refreshBackendTokens = async (backendUrl: string, refreshToken: string) => {
+  try {
+    const refreshRes = await fetch(`${backendUrl}/api/token/refresh/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh: refreshToken }),
+    });
+
+    if (refreshRes.ok) {
+      return refreshRes.json();
+    }
+
+    console.error('⚠️ Backend refresh failed with status', refreshRes.status);
+    return null;
+  } catch (error) {
+    console.error('⚠️ Backend refresh failed:', error);
+    return null;
+  }
+};
+
 declare module "next-auth" {
   interface User {
     idToken?: string;
@@ -123,6 +164,8 @@ export const authOptions: NextAuthOptions = {
 
   callbacks: {
     async jwt({ token, user, account }) {
+      const backendUrl = process.env.BASE_URL || 'http://127.0.0.1:8000';
+
       // Initial sign in
       if (user) {
         token.idToken = user.idToken;
@@ -135,7 +178,6 @@ export const authOptions: NextAuthOptions = {
         token.idToken = account.id_token;
         
         // Exchange Google ID token for backend JWT
-        const backendUrl = process.env.BASE_URL || 'http://127.0.0.1:8000';
         try {
           const backendRes = await fetch(`${backendUrl}/api/token/`, {
             method: 'POST',
@@ -158,25 +200,13 @@ export const authOptions: NextAuthOptions = {
         }
       }
 
-      // Refresh backend access token using refresh token when available
-      if (!token.backendAccess && token.backendRefresh) {
-        const backendUrl = process.env.BASE_URL || 'http://127.0.0.1:8000';
-        try {
-          const refreshRes = await fetch(`${backendUrl}/api/token/refresh/`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refresh: token.backendRefresh }),
-          });
-
-          if (refreshRes.ok) {
-            const refreshed = await refreshRes.json();
-            token.backendAccess = refreshed.access;
-            token.backendRefresh = refreshed.refresh || token.backendRefresh;
-          } else {
-            console.error('⚠️ Backend refresh failed with status', refreshRes.status);
-          }
-        } catch (error) {
-          console.error('⚠️ Backend refresh failed:', error);
+      // Refresh backend access token if missing or expiring soon
+      const shouldRefresh = token.backendRefresh && (!token.backendAccess || isBackendTokenExpiring(token.backendAccess));
+      if (shouldRefresh) {
+        const refreshed = await refreshBackendTokens(backendUrl, token.backendRefresh as string);
+        if (refreshed?.access) {
+          token.backendAccess = refreshed.access;
+          token.backendRefresh = refreshed.refresh || token.backendRefresh;
         }
       }
 

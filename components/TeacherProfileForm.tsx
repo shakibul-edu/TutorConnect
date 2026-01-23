@@ -67,12 +67,28 @@ const TeacherProfileForm: React.FC = () => {
     { start: "16:00", end: "21:00", days: ["MO", "WE", "FR"] },
   ]);
   const [initialSlotIds, setInitialSlotIds] = useState<number[]>([]);
+  const [initialAvailability, setInitialAvailability] = useState<AvailabilitySlot[] | null>(null);
 
   const [educationList, setEducationList] = useState<Education[]>([]);
   const [initialEducationIds, setInitialEducationIds] = useState<number[]>([]);
+  const [initialEducationList, setInitialEducationList] = useState<Education[]>([]);
 
   const [qualificationList, setQualificationList] = useState<Qualification[]>([]);
   const [initialQualificationIds, setInitialQualificationIds] = useState<number[]>([]);
+  const [initialQualificationList, setInitialQualificationList] = useState<Qualification[]>([]);
+
+  const [initialProfile, setInitialProfile] = useState<{ 
+    bio: string;
+    minSalary: number;
+    experience: number;
+    gender: Gender;
+    teachingMode: TeachingMode;
+    distance: number;
+    medium_list: number[];
+    grade_list: number[];
+    subject_list: number[];
+    hasPicture: boolean;
+  } | null>(null);
   
   // Helper to get token
   // @ts-ignore
@@ -155,6 +171,19 @@ const TeacherProfileForm: React.FC = () => {
                 setSelectedMediums(profile.medium_list?.map((m: any) => m.id) || []);
                 setSelectedGrades(profile.grade_list?.map((g: any) => g.id) || []);
                 setSelectedSubjects(profile.subject_list?.map((s: any) => s.id) || []);
+
+                setInitialProfile({
+                  bio: profile.bio || '',
+                  minSalary: profile.min_salary,
+                  experience: profile.experience_years,
+                  gender: profile.gender as Gender,
+                  teachingMode: profile.teaching_mode as TeachingMode,
+                  distance: profile.preferred_distance,
+                  medium_list: profile.medium_list?.map((m: any) => m.id) || [],
+                  grade_list: profile.grade_list?.map((g: any) => g.id) || [],
+                  subject_list: profile.subject_list?.map((s: any) => s.id) || [],
+                  hasPicture: Boolean(profile.profile_picture),
+                });
             }
 
             // 2. Related Data (Education, Qualification, Slots)
@@ -175,6 +204,7 @@ const TeacherProfileForm: React.FC = () => {
                 }));
                 setEducationList(mappedEdu);
                 setInitialEducationIds(mappedEdu.map((e: any) => e.id));
+              setInitialEducationList(mappedEdu);
             }
 
             if (qualRes) {
@@ -188,6 +218,7 @@ const TeacherProfileForm: React.FC = () => {
                 }));
                 setQualificationList(mappedQual);
                 setInitialQualificationIds(mappedQual.map((q: any) => q.id));
+              setInitialQualificationList(mappedQual);
             }
 
             if (slotRes && Array.isArray(slotRes)) {
@@ -219,6 +250,7 @@ const TeacherProfileForm: React.FC = () => {
                 const mappedSlots = Array.from(slotsByTime.values());
                 setAvailability(mappedSlots);
                 setInitialSlotIds(allSlotIds); // Keep track of all original slot IDs
+                setInitialAvailability(mappedSlots);
             }
 
         } catch (error) {
@@ -243,6 +275,69 @@ const TeacherProfileForm: React.FC = () => {
     setSubmitting(true);
 
     try {
+      const isNewProfile = !profileId;
+      const profileChanged = isNewProfile || (() => {
+        if (!initialProfile) return true;
+        const arraysEqual = (a: number[], b: number[]) => a.length === b.length && a.every((v, i) => v === b[i]);
+        return (
+          bio !== initialProfile.bio ||
+          minSalary !== initialProfile.minSalary ||
+          experience !== initialProfile.experience ||
+          gender !== initialProfile.gender ||
+          teachingMode !== initialProfile.teachingMode ||
+          distance !== initialProfile.distance ||
+          !arraysEqual(selectedMediums, initialProfile.medium_list) ||
+          !arraysEqual(selectedGrades, initialProfile.grade_list) ||
+          !arraysEqual(selectedSubjects, initialProfile.subject_list) ||
+          (profilePicture instanceof File) !== initialProfile.hasPicture
+        );
+      })();
+
+      const availabilityChanged = isNewProfile || (!initialAvailability || JSON.stringify(availability) !== JSON.stringify(initialAvailability));
+
+      const educationChanged = (() => {
+        // deletions
+        const currentIds = educationList.map(e => e.id).filter(Boolean) as number[];
+        const eduToDelete = initialEducationIds.filter(id => !currentIds.includes(id));
+        if (eduToDelete.length) return true;
+        // new items
+        if (educationList.some(e => !e.id)) return true;
+        // updates
+        const initialMap = new Map(initialEducationList.map(e => [e.id, e]));
+        return educationList.some(e => {
+          if (!e.id) return false; // already handled new
+          const orig = initialMap.get(e.id);
+          if (!orig) return true;
+          return (
+            orig.institution !== e.institution ||
+            orig.degree !== e.degree ||
+            orig.year !== e.year ||
+            orig.result !== e.result ||
+            e.certificate instanceof File // file upload means change
+          );
+        });
+      })();
+
+      const qualificationChanged = (() => {
+        const currentIds = qualificationList.map(q => q.id).filter(Boolean) as number[];
+        const qualToDelete = initialQualificationIds.filter(id => !currentIds.includes(id));
+        if (qualToDelete.length) return true;
+        if (qualificationList.some(q => !q.id)) return true;
+        const initialMap = new Map(initialQualificationList.map(q => [q.id, q]));
+        return qualificationList.some(q => {
+          if (!q.id) return false;
+          const orig = initialMap.get(q.id);
+          if (!orig) return true;
+          return (
+            orig.organization !== q.organization ||
+            orig.skill !== q.skill ||
+            orig.year !== q.year ||
+            orig.result !== q.result ||
+            q.certificate instanceof File
+          );
+        });
+      })();
+
         const profileData = new FormData();
         profileData.append('bio', bio);
         profileData.append('min_salary', String(minSalary));
@@ -262,16 +357,18 @@ const TeacherProfileForm: React.FC = () => {
         let currentProfileId = profileId;
 
         // 1. Create/Update Profile
-        if (profileId) {
+        if (profileChanged) {
+          if (profileId) {
             await updateTeacher(token, String(profileId), profileData as any);
             toast.success('Profile updated successfully!');
-        } else {
+          } else {
             const newProfile = await createTeacher(token, profileData as any);
             toast.success('Profile created successfully!');
             if (newProfile && newProfile.id) {
-                currentProfileId = newProfile.id;
-                setProfileId(currentProfileId);
+              currentProfileId = newProfile.id;
+              setProfileId(currentProfileId);
             }
+          }
         }
 
         if (!currentProfileId) {
@@ -285,49 +382,52 @@ const TeacherProfileForm: React.FC = () => {
             days: slot.days,
         }));
 
-        if (availPayload.length) {
+        if (availabilityChanged && availPayload.length) {
             await createAvailability(token, availPayload);
             toast.success('Availability saved successfully!');
         }
 
         // 3. Education
-        const currentEduIds = educationList.map(e => e.id).filter(Boolean) as number[];
-        const eduToDelete = initialEducationIds.filter(id => !currentEduIds.includes(id));
-        for (const id of eduToDelete) {
+        if (educationChanged) {
+          const currentEduIds = educationList.map(e => e.id).filter(Boolean) as number[];
+          const eduToDelete = initialEducationIds.filter(id => !currentEduIds.includes(id));
+          for (const id of eduToDelete) {
             await deleteAcademicProfile(token, String(id));
             toast.success('Academic profile deleted successfully!');
-        }
+          }
 
-        for (const edu of educationList) {
+          for (const edu of educationList) {
              const formData = new FormData();
              formData.append('institution', edu.institution);
              formData.append('degree', edu.degree);
              formData.append('graduation_year', edu.year);
              formData.append('results', edu.result);
              formData.append('teacher', String(currentProfileId));
-             
+                 
              if (edu.certificate instanceof File) {
-                 formData.append('certificates', edu.certificate);
+               formData.append('certificates', edu.certificate);
              } 
 
              if (edu.id) {
-                 await updateAcademicProfile(token, String(edu.id), formData);
-                 toast.success('Academic profile updated successfully!');
+               await updateAcademicProfile(token, String(edu.id), formData);
+               toast.success('Academic profile updated successfully!');
              } else {
-                 await submitAcademicProfiles(token, formData);
-                 toast.success('Academic profile submitted successfully!');
+               await submitAcademicProfiles(token, formData);
+               toast.success('Academic profile submitted successfully!');
              }
+          }
         }
 
         // 4. Qualification
-        const currentQualIds = qualificationList.map(q => q.id).filter(Boolean) as number[];
-        const qualToDelete = initialQualificationIds.filter(id => !currentQualIds.includes(id));
-        for (const id of qualToDelete) {
+        if (qualificationChanged) {
+          const currentQualIds = qualificationList.map(q => q.id).filter(Boolean) as number[];
+          const qualToDelete = initialQualificationIds.filter(id => !currentQualIds.includes(id));
+          for (const id of qualToDelete) {
              await deleteQualification(token, String(id));
              toast.success('Qualification deleted successfully!');
-        }
+          }
 
-        for (const qual of qualificationList) {
+          for (const qual of qualificationList) {
              const formData = new FormData();
              formData.append('organization', qual.organization);
              formData.append('skill', qual.skill);
@@ -336,16 +436,17 @@ const TeacherProfileForm: React.FC = () => {
              formData.append('teacher', String(currentProfileId));
 
              if (qual.certificate instanceof File) {
-                 formData.append('certificates', qual.certificate);
+               formData.append('certificates', qual.certificate);
              }
 
              if (qual.id) {
-                 await updateQualification(token, String(qual.id), formData);
-                 toast.success('Qualification updated successfully!');
+               await updateQualification(token, String(qual.id), formData);
+               toast.success('Qualification updated successfully!');
              } else {
-                 await submitQualification(token, formData);
-                 toast.success('Qualification submitted successfully!');
+               await submitQualification(token, formData);
+               toast.success('Qualification submitted successfully!');
              }
+          }
         }
 
         // Navigate to dashboard on success
