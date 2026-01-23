@@ -30,10 +30,11 @@ const Navbar: React.FC = () => {
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
   // Display session user if available, otherwise fall back to app user
-  const displayUser = session?.user || user;
-  const displayName = displayUser?.name || (user ? `${user.first_name} ${user.last_name}` : '');
-  const displayEmail = displayUser?.email || user?.email || '';
-  const displayImage = displayUser?.image || '';
+  const sessionUser = session?.user;
+  const displayUser = sessionUser || user;
+  const displayName = sessionUser?.name || (user ? `${user.first_name} ${user.last_name}` : '');
+  const displayEmail = sessionUser?.email || user?.email || '';
+  const displayImage = sessionUser?.image || '';
 
   const handleLogout = async () => {
     // Sign out from NextAuth

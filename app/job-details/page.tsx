@@ -1,4 +1,4 @@
-
+'use client';
 import React, { useState } from 'react';
 import { stateManager } from '../../services/stateManager';
 import { useRouter } from '../../lib/router';
