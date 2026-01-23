@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from 'react';
-import { getLocation, setLocation } from '../genralCall';
+import { getLocation, setLocation } from './utils/genralCall';
 
 interface LocationPosition {
     latitude: number;

@@ -81,6 +81,22 @@ export interface TeacherProfile {
   qualifications?: Qualification[];
 }
 
+export type TeacherType = {
+  id: string,
+  name: string,
+  gender: string,
+  highest_qualification: string,
+  medium_list: string[],
+  maximum_grade: string,
+  distance: number,
+  expected_salary: number,
+  profile_picture?: string,
+  verified: boolean,
+  teaching_mode: string,
+
+
+}
+
 export interface JobPost {
   id: number;
   title: string;

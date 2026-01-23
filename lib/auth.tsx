@@ -1,11 +1,12 @@
 
 'use client';
 
-import React, { createContext, useContext, useState } from 'react';
-import { useSession } from 'next-auth/react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useSession, signIn } from 'next-auth/react';
 import { User } from '../types';
 import AuthModal from '../components/AuthModal';
 import { useRouter } from './router';
+import { setUnauthorizedCallback } from '../FetchApi';
 
 interface AuthContextType {
   user: User | null;
@@ -23,6 +24,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { push } = useRouter();
+
+  // Set up 401 handler to trigger re-authentication
+  useEffect(() => {
+    setUnauthorizedCallback(() => {
+      console.log('Token invalid, triggering re-authentication...');
+      signIn('google');
+    });
+  }, []);
 
   // Sync session with local user state
   React.useEffect(() => {
@@ -48,6 +57,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     } else if (status === 'unauthenticated') {
       setUser(null);
+    }
+    
+    // Check for session errors (expired token)
+    if ((session as any)?.error === 'AccessTokenExpired' || (session as any)?.error === 'RefreshAccessTokenError') {
+      console.log('Session expired or refresh failed, triggering re-authentication...');
+      signIn('google');
     }
   }, [session, status]);
 

@@ -1,14 +1,19 @@
 
+
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TutorCard } from '../../components/TutorCard';
-import { MOCK_TEACHERS } from '../../services/mockData';
 import Sidebar, { FilterState } from '../../components/Sidebar';
 import { SlidersHorizontal } from 'lucide-react';
+import { getTeachers } from '../../services/backend';
+import { useSession } from 'next-auth/react';
 
 const TutorsPage: React.FC = () => {
+    const { data: session } = useSession();
   const [showMobileFilter, setShowMobileFilter] = useState(false);
+    const [tutors, setTutors] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
     postId: "", // Acts as Tutor ID search
     schedule: undefined,
@@ -18,39 +23,35 @@ const TutorsPage: React.FC = () => {
     distance: 20
   });
 
-  const filteredTutors = MOCK_TEACHERS.filter(tutor => {
-    // 1. Search ID (Tutor ID or User ID)
-    if (filters.postId && tutor.id.toString() !== filters.postId && tutor.user.id.toString() !== filters.postId) {
-        return false;
-    }
-
-    // 2. Fee Range (Tutor's starting salary should be less than user's max)
-    if (tutor.min_salary > filters.feeRange) {
-        return false;
-    }
-
-    // 3. Distance
-    if (tutor.preferred_distance > filters.distance) {
-        return false;
-    }
-
-    // 4. Gender
-    if (filters.gender !== "Any") {
-        if (tutor.gender !== 'any' && tutor.gender.toLowerCase() !== filters.gender.toLowerCase()) {
-            return false;
+    const fetchTutors = async (appliedFilters: any = {}) => {
+        setLoading(true);
+        const idToken = (session as any)?.id_token;
+        if (!idToken) {
+            setLoading(false);
+            return;
         }
-    }
-
-    // 5. Tuition Type
-    if (filters.tuitionType !== "All Tuition") {
-        const requiredMode = filters.tuitionType === "Online" ? "online" : "offline";
-        if (tutor.teaching_mode !== 'any' && tutor.teaching_mode !== requiredMode) {
-            return false;
+        try {
+            const response = await getTeachers(idToken, appliedFilters);
+            if (response) {
+                setTutors(Array.isArray(response) ? response : response.results || []);
+            }
+        } catch (error) {
+            console.error("Error fetching tutors:", error);
+            setTutors([]);
+        } finally {
+            setLoading(false);
         }
-    }
+    };
 
-    return true;
-  });
+    useEffect(() => {
+        fetchTutors();
+    }, [session]);
+
+    const handleApplyFilter = (newFilters: FilterState) => {
+        setFilters(newFilters);
+        fetchTutors(newFilters);
+        setShowMobileFilter(false);
+    };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -68,23 +69,24 @@ const TutorsPage: React.FC = () => {
         </div>
 
         {/* Sidebar */}
-        <div className={`lg:w-72 flex-shrink-0 ${showMobileFilter ? 'block' : 'hidden lg:block'}`}>
-             <Sidebar onApplyFilter={(newFilters) => {
-                setFilters(newFilters);
-                setShowMobileFilter(false);
-            }} />
-        </div>
+           <div className={`lg:w-72 flex-shrink-0 ${showMobileFilter ? 'block' : 'hidden lg:block'}`}>
+               <Sidebar onApplyFilter={handleApplyFilter} />
+           </div>
 
         {/* Main Content */}
         <div className="flex-grow">
             <div className="mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">Find Qualified Tutors</h2>
-                <p className="text-gray-500">Showing {filteredTutors.length} verified educators</p>
+                <p className="text-gray-500">Showing {tutors.length} verified educators</p>
             </div>
       
-            {filteredTutors.length > 0 ? (
+            {loading ? (
+                <div className="flex justify-center items-center h-64">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+                </div>
+            ) : tutors.length > 0 ? (
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
-                    {filteredTutors.map(tutor => (
+                    {tutors.map(tutor => (
                         <TutorCard key={tutor.id} tutor={tutor} />
                     ))}
                 </div>
@@ -92,7 +94,7 @@ const TutorsPage: React.FC = () => {
                 <div className="text-center py-12 bg-white rounded-lg border border-gray-200 border-dashed">
                     <p className="text-gray-500">No tutors match your current criteria.</p>
                      <button 
-                        onClick={() => window.location.reload()}
+                        onClick={() => fetchTutors()}
                         className="mt-2 text-indigo-600 hover:underline font-medium"
                     >
                         Reset Filters

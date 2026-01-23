@@ -56,7 +56,7 @@ const QualificationSection: React.FC<QualificationSectionProps> = ({ qualificati
                   {qual.certificate && (
                     <span className="flex items-center gap-1 text-indigo-600">
                       <FileText className="w-3 h-3" />
-                      {qual.certificate instanceof File ? qual.certificate.name : 'Certificate Attached'}
+                      <a href={typeof qual.certificate === 'string' ? qual.certificate : '#'} target="_blank" className="underline">View Certificate</a>
                     </span>
                   )}
                 </div>

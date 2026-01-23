@@ -94,7 +94,8 @@ const Navbar: React.FC = () => {
                    >
                      My Profile
                    </button>
-                 ) : (
+                 ) : null /* COMMENTED OUT - Post Job feature under development
+                 (
                     <button 
                       onClick={() => setIsPostJobModalOpen(true)}
                       className="inline-flex items-center gap-2 px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 transition-colors"
@@ -102,7 +103,7 @@ const Navbar: React.FC = () => {
                       <PlusCircle className="w-4 h-4" />
                       Post a Job
                     </button>
-                 )}
+                 ) */}
 
                 <div className="relative group">
                    <button className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900 focus:outline-none">
@@ -219,6 +220,7 @@ const Navbar: React.FC = () => {
                 Dashboard
               </button>
               
+              {/* COMMENTED OUT - Post Job feature under development
               {!user.is_teacher && (
                 <button 
                   onClick={() => { setIsPostJobModalOpen(true); closeMobileMenu(); }} 
@@ -228,6 +230,7 @@ const Navbar: React.FC = () => {
                   Post a Job
                 </button>
               )}
+              */}
 
               {user.is_teacher && (
                 <button 

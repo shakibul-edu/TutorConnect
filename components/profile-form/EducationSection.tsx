@@ -56,7 +56,7 @@ const EducationSection: React.FC<EducationSectionProps> = ({ educationList, setE
                   {edu.certificate && (
                     <span className="flex items-center gap-1 text-indigo-600">
                       <FileText className="w-3 h-3" />
-                      {edu.certificate instanceof File ? edu.certificate.name : 'Certificate Attached'}
+                      <a href={typeof edu.certificate === 'string' ? edu.certificate : '#'} target="_blank" className="underline">View Certificate</a>
                     </span>
                   )}
                 </div>

@@ -56,6 +56,21 @@ export async function getSubjects(token: string, body: { grade_id: string[] }) {
 
 // --- Teacher Profile APIs ---
 
+export async function getTeachers(token: string, filters: any = {}) {
+    if (token) {
+        try {
+            const response = await FetchApi.get('/filter-teachers/', filters, { 'Authorization': `Bearer ${token}` });
+            return response;
+        } catch (error) {
+            console.error('Error fetching teachers:', error);
+            throw error;
+        }
+    } else {
+        console.warn('No token found, skipping server connection');
+        return null;
+    }
+}
+
 export async function getTeacherProfile(token: string, id: string | undefined = undefined) {
     if (token) {
         try {
@@ -63,6 +78,21 @@ export async function getTeacherProfile(token: string, id: string | undefined = 
             return response;
         } catch (error) {
             console.error('Error connecting to server:', error);
+            throw error;
+        }
+    } else {
+        console.warn('No token found, skipping server connection');
+        return null;
+    }
+}
+
+export async function getTeacherFullProfile(token: string, id: string) {
+    if (token) {
+        try {
+            const response = await FetchApi.get(`/teacher/full-profile/${id}/`, {}, { 'Authorization': `Bearer ${token}` });
+            return response;
+        } catch (error) {
+            console.error('Error fetching full profile:', error);
             throw error;
         }
     } else {
@@ -105,6 +135,7 @@ export async function getSlots(token: string) {
     if (token) {
         try {
             const response = await FetchApi.get('/availability/', {}, { 'Authorization': `Bearer ${token}` });
+            console.log('Response availability:', response);
             return response;
         } catch (error) {
             console.error('Error connecting to server:', error);
@@ -119,7 +150,7 @@ export async function getSlots(token: string) {
 export async function createTeacher(token: string, data: FormType) {
     if (token) {
         try {
-            const response = await FetchApi.post("/teacher/", data, { 'Authorization': `Bearer ${token}` }, {});
+            const response = await FetchApi.post("/teacher-profile/", data, { 'Authorization': `Bearer ${token}` }, {});
             return response;
         } catch (error) {
             throw new Error((error as { message?: string } | any).message || "Error creating teacher");

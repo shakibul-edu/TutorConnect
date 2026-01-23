@@ -5,9 +5,14 @@ import React from 'react';
 import { useRouter } from '../lib/router';
 import { JobCard } from '../components/JobCard';
 import { MOCK_JOBS } from '../services/mockData';
+import useLocation from '@/LocationHook';
+import { useSession } from 'next-auth/react';
 
 const HomePage: React.FC = () => {
   const { push } = useRouter();
+  const {data: session} = useSession()
+  const {location} = useLocation(session);
+  console.log("Location", location);
 
   const Hero = () => (
     <div className="relative bg-white overflow-hidden">

@@ -8,13 +8,13 @@ interface TimeSlotSelectorProps {
 }
 
 const DAYS_OPTIONS = [
-  { id: 1, name: 'Monday', value: 'Mon' },
-  { id: 2, name: 'Tuesday', value: 'Tue' },
-  { id: 3, name: 'Wednesday', value: 'Wed' },
-  { id: 4, name: 'Thursday', value: 'Thu' },
-  { id: 5, name: 'Friday', value: 'Fri' },
-  { id: 6, name: 'Saturday', value: 'Sat' },
-  { id: 7, name: 'Sunday', value: 'Sun' },
+  { id: 1, name: 'Monday', value: 'MO' },
+  { id: 2, name: 'Tuesday', value: 'TU' },
+  { id: 3, name: 'Wednesday', value: 'WE' },
+  { id: 4, name: 'Thursday', value: 'TH' },
+  { id: 5, name: 'Friday', value: 'FR' },
+  { id: 6, name: 'Saturday', value: 'SA' },
+  { id: 7, name: 'Sunday', value: 'SU' },
 ];
 
 const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({ value, onChange }) => {

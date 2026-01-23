@@ -87,15 +87,15 @@ class StateManager {
     return newReview;
   }
 
-  getReviewsForTutor(tutorId: number) {
+  getReviewsForTutor(tutorId: number|string) {
     return this.reviews.filter(r => r.tutor_id === tutorId);
   }
 
-  getReviewForJobAndTutor(jobId: number, tutorId: number) {
+  getReviewForJobAndTutor(jobId: number, tutorId: number|string) {
     return this.reviews.find(r => r.job_id === jobId && r.tutor_id === tutorId);
   }
 
-  getTutorRating(tutorId: number) {
+  getTutorRating(tutorId: number | string) {
     const tutorReviews = this.getReviewsForTutor(tutorId);
     if (tutorReviews.length === 0) return { avg: 0, count: 0 };
     const sum = tutorReviews.reduce((acc, r) => acc + r.rating, 0);

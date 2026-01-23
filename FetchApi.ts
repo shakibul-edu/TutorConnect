@@ -2,6 +2,13 @@ import { error } from "console";
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 
+// Callback to trigger re-authentication when token is invalid
+let onUnauthorizedCallback: (() => void) | null = null;
+
+export const setUnauthorizedCallback = (callback: () => void) => {
+    onUnauthorizedCallback = callback;
+};
+
 export interface FetchApiOptions {
     method?: HttpMethod;
     headers?: Record<string, string>;
@@ -48,6 +55,15 @@ export class FetchApi {
         }
         console.log('FetchApi Request:', { url: fetchUrl, options: fetchOptions });
         const response = await fetch(fetchUrl, fetchOptions);
+        
+        // Handle 401 Unauthorized - token is invalid/expired
+        if (response.status === 401) {
+            console.log('Received 401 Unauthorized - triggering re-authentication');
+            if (onUnauthorizedCallback) {
+                onUnauthorizedCallback();
+            }
+        }
+        
         if (response.status === 204){
             return null as T;
         }
@@ -58,7 +74,31 @@ export class FetchApi {
             let errorMessage = 'Server error';
             try {
                 const errorData = await response.json();
-                if (errorData && errorData.detail) {
+                
+                // Handle field-specific validation errors
+                // Format: { "field_name": ["error message 1", "error message 2"] }
+                if (errorData && typeof errorData === 'object' && !errorData.detail) {
+                    const errorMessages: string[] = [];
+                    
+                    for (const [field, messages] of Object.entries(errorData)) {
+                        if (Array.isArray(messages)) {
+                            // Capitalize field name and add each error message
+                            const fieldName = field.charAt(0).toUpperCase() + field.slice(1).replace(/_/g, ' ');
+                            messages.forEach((msg: string) => {
+                                errorMessages.push(`${fieldName}: ${msg}`);
+                            });
+                        } else if (typeof messages === 'string') {
+                            // Handle single string error
+                            const fieldName = field.charAt(0).toUpperCase() + field.slice(1).replace(/_/g, ' ');
+                            errorMessages.push(`${fieldName}: ${messages}`);
+                        }
+                    }
+                    
+                    if (errorMessages.length > 0) {
+                        errorMessage = errorMessages.join(' | ');
+                    }
+                } else if (errorData && errorData.detail) {
+                    // Handle general error detail
                     errorMessage = errorData.detail;
                 } else if (response.statusText) {
                     errorMessage = response.statusText;

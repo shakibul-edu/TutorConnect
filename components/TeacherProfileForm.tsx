@@ -6,7 +6,7 @@ import { toast } from '../lib/toast';
 import Availability from './Availability';
 import MultiSelect from './MultiSelect';
 import { AvailabilitySlot, Education, Qualification, Gender, TeachingMode, Medium, Grade, Subject } from '../types';
-import { Save, Loader2 } from 'lucide-react';
+import { Save, Loader2, Upload, X } from 'lucide-react';
 import EducationSection from './profile-form/EducationSection';
 import QualificationSection from './profile-form/QualificationSection';
 import { 
@@ -26,8 +26,10 @@ import {
     deleteAcademicProfile, 
     submitQualification,
     updateQualification,
-    deleteQualification
+    deleteQualification,
+    createAvailability
 } from '../services/backend';
+import Image from 'next/image';
 
 const TeacherProfileForm: React.FC = () => {
   const { user } = useAuth();
@@ -39,6 +41,8 @@ const TeacherProfileForm: React.FC = () => {
   const [profileId, setProfileId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [profilePicture, setProfilePicture] = useState<File | null>(null);
+  const [profilePicturePreview, setProfilePicturePreview] = useState<string | null>(null);
 
   // Form State
   const [bio, setBio] = useState('');
@@ -60,8 +64,9 @@ const TeacherProfileForm: React.FC = () => {
 
   // Complex State
   const [availability, setAvailability] = useState<AvailabilitySlot[]>([
-    { start: "16:00", end: "21:00", days: ["Mon", "Wed", "Fri"] },
+    { start: "16:00", end: "21:00", days: ["MO", "WE", "FR"] },
   ]);
+  const [initialSlotIds, setInitialSlotIds] = useState<number[]>([]);
 
   const [educationList, setEducationList] = useState<Education[]>([]);
   const [initialEducationIds, setInitialEducationIds] = useState<number[]>([]);
@@ -72,6 +77,25 @@ const TeacherProfileForm: React.FC = () => {
   // Helper to get token
   // @ts-ignore
   const token = session?.id_token || (session as any)?.token; // Fallback
+
+  // Handle profile picture change
+  const handleProfilePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+        setProfilePicture(file);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setProfilePicturePreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+    }
+  };
+
+  // Clear profile picture
+  const clearProfilePicture = () => {
+    setProfilePicture(null);
+    setProfilePicturePreview(null);
+  };
 
   // Load Metadata (Mediums)
   useEffect(() => {
@@ -124,9 +148,13 @@ const TeacherProfileForm: React.FC = () => {
                 setTeachingMode(profile.teaching_mode as TeachingMode);
                 setDistance(profile.preferred_distance);
                 
-                setSelectedMediums(profile.medium?.map((m: any) => m.id) || []);
-                setSelectedGrades(profile.grade?.map((g: any) => g.id) || []);
-                setSelectedSubjects(profile.subject?.map((s: any) => s.id) || []);
+                if (profile.profile_picture) {
+                    setProfilePicturePreview(profile.profile_picture);
+                }
+                
+                setSelectedMediums(profile.medium_list?.map((m: any) => m.id) || []);
+                setSelectedGrades(profile.grade_list?.map((g: any) => g.id) || []);
+                setSelectedSubjects(profile.subject_list?.map((s: any) => s.id) || []);
             }
 
             // 2. Related Data (Education, Qualification, Slots)
@@ -162,9 +190,35 @@ const TeacherProfileForm: React.FC = () => {
                 setInitialQualificationIds(mappedQual.map((q: any) => q.id));
             }
 
-            if (slotRes) {
-                // Assuming slots come as array of objects compatible with AvailabilitySlot
-                setAvailability(slotRes);
+            if (slotRes && Array.isArray(slotRes)) {
+                // Transform server slots format to AvailabilitySlot format
+                // Group slots by time frame - combine days with same start and end time
+                const slotsByTime = new Map<string, any>();
+                const allSlotIds: number[] = [];
+
+                for (const slot of slotRes) {
+                    allSlotIds.push(slot.id);
+                    const timeKey = `${slot.start_time}-${slot.end_time}`; // Group by time frame
+                    const startTime = slot.start_time.substring(0, 5); // Convert "16:00:00" to "16:00"
+                    const endTime = slot.end_time.substring(0, 5);     // Convert "21:00:00" to "21:00"
+
+                    if (slotsByTime.has(timeKey)) {
+                        // Add day to existing time slot
+                        slotsByTime.get(timeKey).days.push(slot.days_of_week);
+                    } else {
+                        // Create new time slot
+                        slotsByTime.set(timeKey, {
+                            start: startTime,
+                            end: endTime,
+                            days: [slot.days_of_week]
+                        });
+                    }
+                }
+
+                // Convert map to array
+                const mappedSlots = Array.from(slotsByTime.values());
+                setAvailability(mappedSlots);
+                setInitialSlotIds(allSlotIds); // Keep track of all original slot IDs
             }
 
         } catch (error) {
@@ -188,27 +242,32 @@ const TeacherProfileForm: React.FC = () => {
     
     setSubmitting(true);
 
-    const promise = (async () => {
-        const profileData = {
-            bio,
-            min_salary: minSalary,
-            experience_years: experience,
-            gender,
-            teaching_mode: teachingMode,
-            preferred_distance: distance,
-            medium: selectedMediums,
-            grade: selectedGrades,
-            subject: selectedSubjects,
-            highest_qualification: 'honours', 
-        };
+    try {
+        const profileData = new FormData();
+        profileData.append('bio', bio);
+        profileData.append('min_salary', String(minSalary));
+        profileData.append('experience_years', String(experience));
+        profileData.append('gender', gender);
+        profileData.append('teaching_mode', teachingMode);
+        profileData.append('preferred_distance', String(distance));
+        profileData.append('medium', JSON.stringify(selectedMediums));
+        profileData.append('grade', JSON.stringify(selectedGrades));
+        profileData.append('subject', JSON.stringify(selectedSubjects));
+        profileData.append('highest_qualification', 'honours');
+        
+        if (profilePicture instanceof File) {
+            profileData.append('profile_picture', profilePicture);
+        }
 
         let currentProfileId = profileId;
 
         // 1. Create/Update Profile
         if (profileId) {
             await updateTeacher(token, String(profileId), profileData as any);
+            toast.success('Profile updated successfully!');
         } else {
             const newProfile = await createTeacher(token, profileData as any);
+            toast.success('Profile created successfully!');
             if (newProfile && newProfile.id) {
                 currentProfileId = newProfile.id;
                 setProfileId(currentProfileId);
@@ -219,16 +278,16 @@ const TeacherProfileForm: React.FC = () => {
              throw new Error("Could not create profile ID.");
         }
 
-        // 2. Availability
-        if (availability.length > 0) {
-            const availData = availability.map(a => ({
-                id: a.id,
-                start: a.start,
-                end: a.end,
-                days: a.days,
-                teacher: currentProfileId 
-            }));
-            await updateAvailability(token, String(currentProfileId), availData);
+        // 2. Availability (send grouped slots as provided by UI)
+        const availPayload = availability.map(slot => ({
+            start: slot.start,
+            end: slot.end,
+            days: slot.days,
+        }));
+
+        if (availPayload.length) {
+            await createAvailability(token, availPayload);
+            toast.success('Availability saved successfully!');
         }
 
         // 3. Education
@@ -236,6 +295,7 @@ const TeacherProfileForm: React.FC = () => {
         const eduToDelete = initialEducationIds.filter(id => !currentEduIds.includes(id));
         for (const id of eduToDelete) {
             await deleteAcademicProfile(token, String(id));
+            toast.success('Academic profile deleted successfully!');
         }
 
         for (const edu of educationList) {
@@ -252,8 +312,10 @@ const TeacherProfileForm: React.FC = () => {
 
              if (edu.id) {
                  await updateAcademicProfile(token, String(edu.id), formData);
+                 toast.success('Academic profile updated successfully!');
              } else {
                  await submitAcademicProfiles(token, formData);
+                 toast.success('Academic profile submitted successfully!');
              }
         }
 
@@ -262,6 +324,7 @@ const TeacherProfileForm: React.FC = () => {
         const qualToDelete = initialQualificationIds.filter(id => !currentQualIds.includes(id));
         for (const id of qualToDelete) {
              await deleteQualification(token, String(id));
+             toast.success('Qualification deleted successfully!');
         }
 
         for (const qual of qualificationList) {
@@ -278,23 +341,21 @@ const TeacherProfileForm: React.FC = () => {
 
              if (qual.id) {
                  await updateQualification(token, String(qual.id), formData);
+                 toast.success('Qualification updated successfully!');
              } else {
                  await submitQualification(token, formData);
+                 toast.success('Qualification submitted successfully!');
              }
         }
-    })();
 
-    toast.promise(promise, {
-        loading: 'Saving profile...',
-        success: 'Profile updated successfully!',
-        error: (err) => `Failed to update: ${err.message || 'Unknown error'}`
-    })
-    .then(() => {
+        // Navigate to dashboard on success
         push('dashboard');
-    })
-    .finally(() => {
+    } catch (error) {
+        console.error('Profile submission error:', error);
+        toast.error(`Failed to update profile: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
         setSubmitting(false);
-    });
+    }
   };
 
   if(!session && !user) {
@@ -319,6 +380,45 @@ const TeacherProfileForm: React.FC = () => {
             {profileId ? 'Edit Teacher Profile' : 'Create Teacher Profile'}
         </h1>
         <p className="text-gray-500 mt-2">Update your information to attract the right students.</p>
+      </div>
+
+      {/* Profile Picture Upload Section */}
+      <div className="flex justify-center">
+        <div className="w-full max-w-sm">
+          <label className="block text-sm font-medium text-gray-700 mb-4 text-center">Profile Picture</label>
+          <div className="relative">
+            {profilePicturePreview ? (
+              <div className="relative inline-block w-full">
+                <Image
+                  src={profilePicturePreview} 
+                  alt="Profile preview" 
+                  width={128}
+                  height={128}
+                  className="w-32 h-32 rounded-full object-cover mx-auto border-4 border-indigo-600 shadow-lg"
+                />
+                <button
+                  type="button"
+                  onClick={clearProfilePicture}
+                  className="absolute top-0 right-12 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="w-32 h-32 rounded-full mx-auto border-4 border-dashed border-gray-300 flex items-center justify-center bg-gray-50">
+                <Upload className="w-8 h-8 text-gray-400" />
+              </div>
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleProfilePictureChange}
+              className="absolute inset-0 w-32 h-32 rounded-full mx-auto opacity-0 cursor-pointer"
+              title="Click to upload profile picture"
+            />
+          </div>
+          <p className="text-xs text-gray-500 text-center mt-2">Click on the image to upload a profile picture (JPG, PNG)</p>
+        </div>
       </div>
 
       {loading && !profileId && !mediumOptions.length ? (
