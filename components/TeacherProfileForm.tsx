@@ -459,7 +459,9 @@ const TeacherProfileForm: React.FC = () => {
         push('dashboard');
     } catch (error) {
         console.error('Profile submission error:', error);
-        toast.error(`Failed to update profile: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        // Error message is already formatted by FetchApi.parseErrorResponse
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        toast.error(errorMessage);
     } finally {
         setSubmitting(false);
     }

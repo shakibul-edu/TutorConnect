@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import { ContactRequest } from '../../types';
 import { Phone, MessageSquare, Clock, CheckCircle, XCircle, Hourglass, User } from 'lucide-react';
 
@@ -73,6 +74,11 @@ const ContactRequestList: React.FC<ContactRequestListProps> = ({ title, requests
                   </span>
                 </div>
 
+                <div className="flex items-center gap-2 text-sm text-gray-700">
+                  <span className="text-gray-400 text-xs font-semibold uppercase tracking-widest">Budget</span>
+                  <span className="font-semibold">{req.fee_budget} BDT</span>
+                </div>
+
                 <div className="flex items-start gap-2 text-sm text-gray-700">
                   <MessageSquare className="w-4 h-4 text-gray-400 flex-shrink-0" />
                   <p className="leading-relaxed">{req.message}</p>
@@ -101,6 +107,17 @@ const ContactRequestList: React.FC<ContactRequestListProps> = ({ title, requests
                       <XCircle className="w-4 h-4" />
                       {actionLoadingId === req.id ? 'Rejecting...' : 'Reject'}
                     </button>
+                  </div>
+                )}
+
+                {role === 'student' && (
+                  <div className="pt-2">
+                    <Link
+                      href={`/tutor-details/${req.teacher}`}
+                      className="inline-flex items-center justify-center px-3 py-2 rounded-md bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700"
+                    >
+                      View Tutor
+                    </Link>
                   </div>
                 )}
               </div>

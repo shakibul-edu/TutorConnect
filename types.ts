@@ -197,6 +197,7 @@ export interface ContactRequest {
   id: number;
   student_name: string;
   student_phone: string;
+  fee_budget: number;
   message: string;
   status: ContactRequestStatus;
   email_opened_at?: string;
@@ -205,4 +206,6 @@ export interface ContactRequest {
   student: number;
   teacher: number;
   teacher_phone?: string;
+  teacher_email?: string;
+  student_email?: string;
 }

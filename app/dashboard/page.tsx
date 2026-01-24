@@ -32,16 +32,18 @@ const DashboardPage: React.FC = () => {
 
   useEffect(() => {
     const fetchContactRequests = async () => {
-      if (!token || !user) return;
+      if (!token || !user || !user.email) return;
       setContactLoading(true);
       try {
-        const [asStudent, asTeacher] = await Promise.all([
-          getContactRequests(token, { student: user.id }),
-          getContactRequests(token, { teacher: user.id })
-        ]);
+        const allRequests = await getContactRequests(token, {});
+        const requests = Array.isArray(allRequests) ? allRequests : [];
+        
+        // Filter by email: separate requests where user is student vs teacher
+        const asStudent = requests.filter((req: ContactRequest) => req.student_email === user.email);
+        const asTeacher = requests.filter((req: ContactRequest) => req.teacher_email === user.email);
 
-        setRequestsAsStudent(Array.isArray(asStudent) ? asStudent : []);
-        setRequestsAsTeacher(Array.isArray(asTeacher) ? asTeacher : []);
+        setRequestsAsStudent(asStudent);
+        setRequestsAsTeacher(asTeacher);
       } catch (error) {
         console.error('Error loading contact requests', error);
       } finally {
@@ -64,7 +66,9 @@ const DashboardPage: React.FC = () => {
       triggerRefresh();
     } catch (error) {
       console.error('Error updating contact request', error);
-      toast.error('Failed to update request.');
+      // Error message is already formatted by FetchApi.parseErrorResponse
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update request';
+      toast.error(errorMessage);
     } finally {
       setActionLoadingId(null);
     }

@@ -28,6 +28,7 @@ const ContactRequestModal: React.FC<ContactRequestModalProps> = ({
       ? `${user.first_name} ${user.last_name}` 
       : user?.username || '',
     student_phone: '',
+    fee_budget: '',
     message: '',
   });
 
@@ -50,8 +51,14 @@ const ContactRequestModal: React.FC<ContactRequestModalProps> = ({
       return;
     }
 
-    if (!formData.student_name.trim() || !formData.student_phone.trim() || !formData.message.trim()) {
+    if (!formData.student_name.trim() || !formData.student_phone.trim() || !formData.fee_budget.trim() || !formData.message.trim()) {
       toast.error('Please fill in all fields.');
+      return;
+    }
+
+    const budgetNumber = Number(formData.fee_budget);
+    if (Number.isNaN(budgetNumber) || budgetNumber <= 0) {
+      toast.error('Enter a valid fee budget.');
       return;
     }
 
@@ -61,8 +68,9 @@ const ContactRequestModal: React.FC<ContactRequestModalProps> = ({
       const response = await submitContactRequest(token, {
         student_name: formData.student_name,
         student_phone: formData.student_phone,
+        fee_budget: budgetNumber,
         message: formData.message,
-        teacher: teacherId,
+        teacher: Number(teacherId),
       });
 
       if (response) {
@@ -72,13 +80,16 @@ const ContactRequestModal: React.FC<ContactRequestModalProps> = ({
             ? `${user.first_name} ${user.last_name}` 
             : user?.username || '',
           student_phone: '',
+          fee_budget: '',
           message: '',
         });
         onClose();
       }
     } catch (error) {
       console.error('Error submitting contact request:', error);
-      toast.error(`Failed to send contact request: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Error message is already formatted by FetchApi.parseErrorResponse
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -130,6 +141,21 @@ const ContactRequestModal: React.FC<ContactRequestModalProps> = ({
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               placeholder="Your phone number"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Fee Budget (BDT)
+            </label>
+            <input
+              type="number"
+              name="fee_budget"
+              value={formData.fee_budget}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              placeholder="e.g., 5000"
+              min={1}
             />
           </div>
 

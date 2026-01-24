@@ -20,6 +20,55 @@ export interface FetchApiOptions {
 export class FetchApi {
     private static baseUrl: string = process.env.BASE_URL || '127.0.0.1:8000';
 
+    /**
+     * Parse error response from backend API
+     * Handles two formats:
+     * 1. Simple detail: { "detail": "Error message" }
+     * 2. Field-based: { "field_name": ["Error 1", "Error 2"], "other_field": ["Error"] }
+     */
+    private static parseErrorResponse(errorData: any, fallbackMessage: string = 'Server error'): string {
+        if (!errorData || typeof errorData !== 'object') {
+            return fallbackMessage;
+        }
+
+        // Format 1: { "detail": "Error message" }
+        if (errorData.detail) {
+            return typeof errorData.detail === 'string' ? errorData.detail : fallbackMessage;
+        }
+
+        // Format 2: Field-based validation errors
+        const errorMessages: string[] = [];
+        
+        for (const [field, messages] of Object.entries(errorData)) {
+            if (Array.isArray(messages)) {
+                // Capitalize and format field name (e.g., "student_name" -> "Student name")
+                const fieldName = field
+                    .split('_')
+                    .map((word, index) => index === 0 
+                        ? word.charAt(0).toUpperCase() + word.slice(1) 
+                        : word.toLowerCase()
+                    )
+                    .join(' ');
+                
+                messages.forEach((msg: string) => {
+                    errorMessages.push(`${fieldName}: ${msg}`);
+                });
+            } else if (typeof messages === 'string') {
+                // Handle single string error for a field
+                const fieldName = field
+                    .split('_')
+                    .map((word, index) => index === 0 
+                        ? word.charAt(0).toUpperCase() + word.slice(1) 
+                        : word.toLowerCase()
+                    )
+                    .join(' ');
+                errorMessages.push(`${fieldName}: ${messages}`);
+            }
+        }
+        
+        return errorMessages.length > 0 ? errorMessages.join('\n') : fallbackMessage;
+    }
+
     private static buildEndpointUrl(endpoint: string): string {
         if (!this.baseUrl) {
             throw new Error('Base URL is not set. Use FetchApi.setBaseUrl(url) first.');
@@ -74,37 +123,10 @@ export class FetchApi {
             let errorMessage = 'Server error';
             try {
                 const errorData = await response.json();
-                
-                // Handle field-specific validation errors
-                // Format: { "field_name": ["error message 1", "error message 2"] }
-                if (errorData && typeof errorData === 'object' && !errorData.detail) {
-                    const errorMessages: string[] = [];
-                    
-                    for (const [field, messages] of Object.entries(errorData)) {
-                        if (Array.isArray(messages)) {
-                            // Capitalize field name and add each error message
-                            const fieldName = field.charAt(0).toUpperCase() + field.slice(1).replace(/_/g, ' ');
-                            messages.forEach((msg: string) => {
-                                errorMessages.push(`${fieldName}: ${msg}`);
-                            });
-                        } else if (typeof messages === 'string') {
-                            // Handle single string error
-                            const fieldName = field.charAt(0).toUpperCase() + field.slice(1).replace(/_/g, ' ');
-                            errorMessages.push(`${fieldName}: ${messages}`);
-                        }
-                    }
-                    
-                    if (errorMessages.length > 0) {
-                        errorMessage = errorMessages.join(' | ');
-                    }
-                } else if (errorData && errorData.detail) {
-                    // Handle general error detail
-                    errorMessage = errorData.detail;
-                } else if (response.statusText) {
-                    errorMessage = response.statusText;
-                }
+                errorMessage = this.parseErrorResponse(errorData, response.statusText);
             } catch (e) {
-                // Ignore JSON parse errors, use default message
+                // If JSON parsing fails, use status text or default message
+                errorMessage = response.statusText || `HTTP Error ${response.status}`;
             }
             throw new Error(errorMessage);
         }

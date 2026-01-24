@@ -306,6 +306,7 @@ export async function getTutions(filters: any = {}) {
 export async function submitContactRequest(token: string, data: {
     student_name: string;
     student_phone: string;
+    fee_budget: number;
     message: string;
     teacher: number;
 }) {
