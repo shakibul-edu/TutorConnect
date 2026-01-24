@@ -301,3 +301,87 @@ export async function getTutions(filters: any = {}) {
         throw new Error("Failed to fetch tuitions");
     }
 }
+// --- Contact Request APIs ---
+
+export async function submitContactRequest(token: string, data: {
+    student_name: string;
+    student_phone: string;
+    message: string;
+    teacher: number;
+}) {
+    if (token) {
+        try {
+            const response = await FetchApi.post('/contact-request/', data, { 'Authorization': `Bearer ${token}` });
+            return response;
+        } catch (error) {
+            console.error('Error submitting contact request:', error);
+            throw error;
+        }
+    } else {
+        console.warn('No token found, skipping server connection');
+        return null;
+    }
+}
+
+export async function getContactRequests(token: string, filters: any = {}) {
+    if (token) {
+        try {
+            const response = await FetchApi.get('/contact-request/', filters, { 'Authorization': `Bearer ${token}` });
+            return response;
+        } catch (error) {
+            console.error('Error fetching contact requests:', error);
+            throw error;
+        }
+    } else {
+        console.warn('No token found, skipping server connection');
+        return null;
+    }
+}
+
+export async function getContactRequest(token: string, id: string) {
+    if (token) {
+        try {
+            const response = await FetchApi.get(`/contact-request/${id}/`, {}, { 'Authorization': `Bearer ${token}` });
+            return response;
+        } catch (error) {
+            console.error('Error fetching contact request:', error);
+            throw error;
+        }
+    } else {
+        console.warn('No token found, skipping server connection');
+        return null;
+    }
+}
+
+export async function updateContactRequest(token: string, id: string, data: {
+    status?: 'pending' | 'accepted' | 'rejected';
+    message?: string;
+}) {
+    if (token) {
+        try {
+            const response = await FetchApi.patch(`/contact-request/${id}/`, data, { 'Authorization': `Bearer ${token}` });
+            return response;
+        } catch (error) {
+            console.error('Error updating contact request:', error);
+            throw error;
+        }
+    } else {
+        console.warn('No token found, skipping server connection');
+        return null;
+    }
+}
+
+export async function deleteContactRequest(token: string, id: string) {
+    if (token) {
+        try {
+            const response = await FetchApi.delete(`/contact-request/${id}/`, undefined, { 'Authorization': `Bearer ${token}` });
+            return response;
+        } catch (error) {
+            console.error('Error deleting contact request:', error);
+            throw error;
+        }
+    } else {
+        console.warn('No token found, skipping server connection');
+        return null;
+    }
+}

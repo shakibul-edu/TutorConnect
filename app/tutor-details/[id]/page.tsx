@@ -7,6 +7,7 @@ import { useSession } from 'next-auth/react';
 import { ArrowLeft, ShieldCheck, Clock, FileText, CheckCircle, XCircle, User, MapPin, DollarSign, Briefcase, Users } from 'lucide-react';
 import { getTeacherFullProfile } from '../../../services/backend';
 import { getBackendImageUrl } from '../../../utils/imageHelper';
+import ContactRequestModal from '@/components/ContactRequestModal';
 
 export default function TutorDetailsPage() {
     const params = useParams();
@@ -15,6 +16,7 @@ export default function TutorDetailsPage() {
     const { data: session, status } = useSession();
     const [profileData, setProfileData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [isContactModalOpen, setIsContactModalOpen] = useState(false);
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -350,6 +352,17 @@ export default function TutorDetailsPage() {
                         <p className="text-gray-500 text-sm p-4 bg-gray-50 rounded-md border border-gray-200">No qualifications added</p>
                     )}
                 </div>
+
+                <button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200 mt-6" onClick={() => setIsContactModalOpen(true)}>
+                    Apply for Contact
+                </button>
+
+                <ContactRequestModal
+                    isOpen={isContactModalOpen}
+                    onClose={() => setIsContactModalOpen(false)}
+                    teacherId={id}
+                    teacherName={teacher_profile.name}
+                />
             </div>
         </div>
     );

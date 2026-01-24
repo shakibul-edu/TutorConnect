@@ -190,3 +190,19 @@ export type qualificationType = {
   certificates: string;
   validated: boolean;
 }
+
+export type ContactRequestStatus = 'pending' | 'accepted' | 'rejected';
+
+export interface ContactRequest {
+  id: number;
+  student_name: string;
+  student_phone: string;
+  message: string;
+  status: ContactRequestStatus;
+  email_opened_at?: string;
+  created_at: string;
+  updated_at: string;
+  student: number;
+  teacher: number;
+  teacher_phone?: string;
+}

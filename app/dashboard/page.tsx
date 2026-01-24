@@ -1,20 +1,74 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
+import { useSession } from 'next-auth/react';
 import { stateManager } from '../../services/stateManager';
 import { AlertCircle, PlusCircle } from 'lucide-react';
 import PostJobModal from '../../components/PostJobModal';
 import SellerDashboard from '../../components/dashboard/SellerDashboard';
 import BuyerDashboard from '../../components/dashboard/BuyerDashboard';
+import ContactRequestList from '../../components/dashboard/ContactRequestList';
+import { getContactRequests, updateContactRequest } from '../../services/backend';
+import { ContactRequest } from '../../types';
+import { toast } from '../../lib/toast';
 
 const DashboardPage: React.FC = () => {
   const { user } = useAuth();
+  // @ts-ignore
+  const { data: session } = useSession();
   const [isPostJobModalOpen, setIsPostJobModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [contactLoading, setContactLoading] = useState(false);
+  const [requestsAsStudent, setRequestsAsStudent] = useState<ContactRequest[]>([]);
+  const [requestsAsTeacher, setRequestsAsTeacher] = useState<ContactRequest[]>([]);
+  const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
+
+  // @ts-ignore
+  const token = (session as any)?.backendAccess;
 
   const triggerRefresh = () => setRefreshKey(prev => prev + 1);
+
+  useEffect(() => {
+    const fetchContactRequests = async () => {
+      if (!token || !user) return;
+      setContactLoading(true);
+      try {
+        const [asStudent, asTeacher] = await Promise.all([
+          getContactRequests(token, { student: user.id }),
+          getContactRequests(token, { teacher: user.id })
+        ]);
+
+        setRequestsAsStudent(Array.isArray(asStudent) ? asStudent : []);
+        setRequestsAsTeacher(Array.isArray(asTeacher) ? asTeacher : []);
+      } catch (error) {
+        console.error('Error loading contact requests', error);
+      } finally {
+        setContactLoading(false);
+      }
+    };
+
+    fetchContactRequests();
+  }, [token, user, refreshKey]);
+
+  const handleContactStatusChange = async (id: number, status: 'accepted' | 'rejected') => {
+    if (!token) {
+      toast.error('You must be logged in to update requests.');
+      return;
+    }
+    setActionLoadingId(id);
+    try {
+      await updateContactRequest(token, String(id), { status });
+      toast.success(`Request ${status}.`);
+      triggerRefresh();
+    } catch (error) {
+      console.error('Error updating contact request', error);
+      toast.error('Failed to update request.');
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
 
   if (!user) {
     return (
@@ -63,6 +117,26 @@ const DashboardPage: React.FC = () => {
                 user={user}
             />
         )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+          <ContactRequestList 
+            title="Sent Contact Requests" 
+            requests={requestsAsStudent} 
+            role="student" 
+            loading={contactLoading}
+          />
+
+          {(user.is_teacher || requestsAsTeacher.length > 0) && (
+            <ContactRequestList 
+              title="Requests To You" 
+              requests={requestsAsTeacher} 
+              role="teacher" 
+              loading={contactLoading}
+              onStatusChange={handleContactStatusChange}
+              actionLoadingId={actionLoadingId}
+            />
+          )}
+        </div>
 
         {isPostJobModalOpen && (
           <PostJobModal 

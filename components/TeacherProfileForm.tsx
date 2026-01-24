@@ -46,6 +46,7 @@ const TeacherProfileForm: React.FC = () => {
 
   // Form State
   const [bio, setBio] = useState('');
+  const [phone, setPhone] = useState('');
   const [minSalary, setMinSalary] = useState(5000);
   const [experience, setExperience] = useState(0);
   const [gender, setGender] = useState<Gender>('male');
@@ -79,6 +80,7 @@ const TeacherProfileForm: React.FC = () => {
 
   const [initialProfile, setInitialProfile] = useState<{ 
     bio: string;
+    phone: string;
     minSalary: number;
     experience: number;
     gender: Gender;
@@ -158,6 +160,7 @@ const TeacherProfileForm: React.FC = () => {
             if (profile) {
                 setProfileId(profile.id);
                 setBio(profile.bio);
+                setPhone(profile.phone || '');
                 setMinSalary(profile.min_salary);
                 setExperience(profile.experience_years);
                 setGender(profile.gender as Gender);
@@ -174,6 +177,7 @@ const TeacherProfileForm: React.FC = () => {
 
                 setInitialProfile({
                   bio: profile.bio || '',
+                  phone: profile.phone || '',
                   minSalary: profile.min_salary,
                   experience: profile.experience_years,
                   gender: profile.gender as Gender,
@@ -281,6 +285,7 @@ const TeacherProfileForm: React.FC = () => {
         const arraysEqual = (a: number[], b: number[]) => a.length === b.length && a.every((v, i) => v === b[i]);
         return (
           bio !== initialProfile.bio ||
+          phone !== initialProfile.phone ||
           minSalary !== initialProfile.minSalary ||
           experience !== initialProfile.experience ||
           gender !== initialProfile.gender ||
@@ -340,6 +345,7 @@ const TeacherProfileForm: React.FC = () => {
 
         const profileData = new FormData();
         profileData.append('bio', bio);
+        profileData.append('phone', phone);
         profileData.append('min_salary', String(minSalary));
         profileData.append('experience_years', String(experience));
         profileData.append('gender', gender);
@@ -536,6 +542,17 @@ const TeacherProfileForm: React.FC = () => {
               rows={4}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               placeholder="Tell students about your teaching style and experience..."
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              placeholder="Enter your phone number"
             />
           </div>
 
