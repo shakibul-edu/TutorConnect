@@ -8,10 +8,11 @@ import { User } from '../types';
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLogin: (user: User) => void;
+  onLogin?: (user: User) => void;
+  callbackUrl?: string;
 }
 
-const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }) => {
+const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, callbackUrl }) => {
   const { data: session } = useSession();
   const [isLoading, setIsLoading] = React.useState(false);
 
@@ -20,9 +21,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }) => {
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     try {
-      await signIn('google', { redirect: false });
+      const redirectUrl = callbackUrl || '/dashboard';
+      await signIn('google', { redirect: true, callbackUrl: redirectUrl });
       // The session will be updated automatically by NextAuth, triggering the AuthProvider sync
-      onClose();
+      onClose?.();
     } catch (error) {
       console.error('Google login error:', error);
       setIsLoading(false);

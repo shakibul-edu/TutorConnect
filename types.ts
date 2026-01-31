@@ -14,6 +14,7 @@ export interface User {
   is_teacher: boolean;
   location?: { lat: number; lng: number };
   banned: boolean;
+  image?: string;
 }
 
 export interface Medium {
@@ -93,6 +94,8 @@ export type TeacherType = {
   profile_picture?: string,
   verified: boolean,
   teaching_mode: string,
+  reviews_average: number,
+  reviews_count: number,
 
 
 }
@@ -134,6 +137,21 @@ export interface Review {
   rating: number;
   comment: string;
   created_at: string;
+}
+
+export interface TeacherReview {
+  id: number;
+  rating: number;
+  comment: string;
+  created_at: string;
+  contact_request: number;
+  student_name: string;
+}
+
+export interface DashboardStats {
+  total_contact_requests_sent: number;
+  total_contact_requests_received: number;
+  total_pending_requests: number;
 }
 
 export interface AuthState {

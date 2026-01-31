@@ -10,8 +10,8 @@ import PostJobModal from '../../components/PostJobModal';
 import SellerDashboard from '../../components/dashboard/SellerDashboard';
 import BuyerDashboard from '../../components/dashboard/BuyerDashboard';
 import ContactRequestList from '../../components/dashboard/ContactRequestList';
-import { getContactRequests, updateContactRequest } from '../../services/backend';
-import { ContactRequest } from '../../types';
+import { getContactRequests, updateContactRequest, getAllReviews, getUserDashboardStats } from '../../services/backend';
+import { ContactRequest, TeacherReview, DashboardStats } from '../../types';
 import { toast } from '../../lib/toast';
 
 const DashboardPage: React.FC = () => {
@@ -24,6 +24,8 @@ const DashboardPage: React.FC = () => {
   const [requestsAsStudent, setRequestsAsStudent] = useState<ContactRequest[]>([]);
   const [requestsAsTeacher, setRequestsAsTeacher] = useState<ContactRequest[]>([]);
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
+  const [reviews, setReviews] = useState<TeacherReview[]>([]);
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
 
   // @ts-ignore
   const token = (session as any)?.backendAccess;
@@ -44,6 +46,18 @@ const DashboardPage: React.FC = () => {
 
         setRequestsAsStudent(asStudent);
         setRequestsAsTeacher(asTeacher);
+
+        // Fetch reviews
+        const allReviews = await getAllReviews(token);
+        if (allReviews && Array.isArray(allReviews)) {
+          setReviews(allReviews);
+        }
+
+        // Fetch dashboard stats
+        const stats = await getUserDashboardStats(token);
+        if (stats) {
+          setDashboardStats(stats);
+        }
       } catch (error) {
         console.error('Error loading contact requests', error);
       } finally {
@@ -112,13 +126,14 @@ const DashboardPage: React.FC = () => {
         </div>
 
         {user.is_teacher ? (
-            <SellerDashboard myBids={myBids} />
+            <SellerDashboard myBids={myBids} stats={dashboardStats} />
         ) : (
             <BuyerDashboard 
                 myJobs={myJobs} 
                 totalBidsReceived={totalBidsReceived} 
                 onRefresh={triggerRefresh} 
                 user={user}
+                stats={dashboardStats}
             />
         )}
 
@@ -128,6 +143,8 @@ const DashboardPage: React.FC = () => {
             requests={requestsAsStudent} 
             role="student" 
             loading={contactLoading}
+            reviews={reviews}
+            onReviewSubmitted={triggerRefresh}
           />
 
           {(user.is_teacher || requestsAsTeacher.length > 0) && (
@@ -138,6 +155,8 @@ const DashboardPage: React.FC = () => {
               loading={contactLoading}
               onStatusChange={handleContactStatusChange}
               actionLoadingId={actionLoadingId}
+              reviews={reviews}
+              onReviewSubmitted={triggerRefresh}
             />
           )}
         </div>

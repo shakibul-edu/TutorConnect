@@ -13,7 +13,7 @@ interface TutorCardProps {
 }
 
 export const TutorCard: React.FC<TutorCardProps> = ({ tutor }) => {
-  const ratingData = stateManager.getTutorRating(tutor.id);
+  
   const { push } = useRouter();
 
   const handleViewProfile = () => {
@@ -51,11 +51,11 @@ export const TutorCard: React.FC<TutorCardProps> = ({ tutor }) => {
             </div>
             <p className="text-sm text-gray-500 capitalize">{tutor.highest_qualification}</p>
              <div className="flex items-center gap-1 mt-1">
-                <Star className={`w-4 h-4 ${ratingData.count > 0 ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
+                <Star className={`w-4 h-4 ${tutor.reviews_count > 0 ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
                 <span className="text-sm font-bold text-gray-900">
-                  {ratingData.count > 0 ? ratingData.avg : 'New'}
+                  {tutor.reviews_count > 0 ? tutor.reviews_average : 'New'}
                 </span>
-                <span className="text-sm text-gray-400">({ratingData.count} reviews)</span>
+                <span className="text-sm text-gray-400">({tutor.reviews_count} reviews)</span>
             </div>
           </div>
         </div>

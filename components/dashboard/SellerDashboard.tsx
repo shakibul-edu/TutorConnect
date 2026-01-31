@@ -1,16 +1,17 @@
 
 import React, { useState } from 'react';
-import { Bid, Review } from '../../types';
+import { Bid, Review, DashboardStats } from '../../types';
 import { stateManager } from '../../services/stateManager';
 import StatCard from './StatCard';
-import { ClipboardList, CheckCircle, MessageSquare, Clock, Star } from 'lucide-react';
+import { ClipboardList, CheckCircle, MessageSquare, Clock, Star, Send } from 'lucide-react';
 import ReviewModal from '../ReviewModal';
 
 interface SellerDashboardProps {
   myBids: Bid[];
+  stats?: DashboardStats | null;
 }
 
-const SellerDashboard: React.FC<SellerDashboardProps> = ({ myBids }) => {
+const SellerDashboard: React.FC<SellerDashboardProps> = ({ myBids, stats }) => {
   const [selectedReview, setSelectedReview] = useState<Review | null>(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [reviewTutorName, setReviewTutorName] = useState('');
@@ -26,10 +27,16 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ myBids }) => {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <StatCard title="Applications Sent" value={myBids.length} colorClass="bg-indigo-600" icon={ClipboardList} />
         <StatCard title="Hired" value={myBids.filter(b => b.status === 'accepted').length} colorClass="bg-emerald-500" icon={CheckCircle} />
         <StatCard title="Messages" value="0" colorClass="bg-blue-500" icon={MessageSquare} />
+        <StatCard 
+          title="Requests Received" 
+          value={stats?.total_contact_requests_received ?? 0} 
+          colorClass="bg-amber-600" 
+          icon={Send} 
+        />
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">

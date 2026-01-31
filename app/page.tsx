@@ -1,73 +1,26 @@
-
 'use client';
 
 import React from 'react';
-import { useRouter } from '../lib/router';
-import { JobCard } from '../components/JobCard';
-import { MOCK_JOBS } from '../services/mockData';
-import useLocation from '@/LocationHook';
-import { useSession } from 'next-auth/react';
+import Hero from '../components/landing/Hero';
+import Features from '../components/landing/Features';
+import HowItWorks from '../components/landing/HowItWorks';
+import Testimonials from '../components/landing/Testimonials';
+import CTA from '../components/landing/CTA';
+import LandingFooter from '../components/landing/LandingFooter';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const HomePage: React.FC = () => {
-  const { push } = useRouter();
-  const {data: session} = useSession()
-  const {location} = useLocation(session);
-  console.log("Location", location);
-
-  const Hero = () => (
-    <div className="relative bg-white overflow-hidden">
-      <div className="max-w-7xl mx-auto">
-        <div className="relative z-10 pb-8 bg-white sm:pb-16 md:pb-20 lg:max-w-2xl lg:w-full lg:pb-28 xl:pb-32">
-          <main className="mt-10 mx-auto max-w-7xl px-4 sm:mt-12 sm:px-6 md:mt-16 lg:mt-20 lg:px-8 xl:mt-28">
-            <div className="sm:text-center lg:text-left">
-              <h1 className="text-4xl tracking-tight font-extrabold text-gray-900 sm:text-5xl md:text-6xl">
-                <span className="block xl:inline">Master your future with</span>{' '}
-                <span className="block text-indigo-600 xl:inline">expert tutors</span>
-              </h1>
-              <p className="mt-3 text-base text-gray-500 sm:mt-5 sm:text-lg sm:max-w-xl sm:mx-auto md:mt-5 md:text-xl lg:mx-0">
-                Connect with verified tutors from top universities or find the perfect tuition job that matches your skills.
-              </p>
-              <div className="mt-5 sm:mt-8 sm:flex sm:justify-center lg:justify-start">
-                <div className="rounded-md shadow">
-                  <button onClick={() => push('tutors')} className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 md:py-4 md:text-lg">
-                    Find a Tutor
-                  </button>
-                </div>
-                <div className="mt-3 sm:mt-0 sm:ml-3">
-                  <button onClick={() => push('jobs')} className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 md:py-4 md:text-lg">
-                    Browse Jobs
-                  </button>
-                </div>
-              </div>
-            </div>
-          </main>
-        </div>
-      </div>
-      <div className="lg:absolute lg:inset-y-0 lg:right-0 lg:w-1/2 bg-gray-50 flex items-center justify-center">
-        <img
-          className="h-56 w-full object-cover sm:h-72 md:h-96 lg:w-full lg:h-full opacity-90"
-          src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-1.2.1&auto=format&fit=crop&w=1351&q=80"
-          alt="Students learning"
-        />
-      </div>
-    </div>
-  );
+  const { language } = useLanguage();
 
   return (
-    <>
+    <div className={`min-h-screen bg-white ${language === 'bn' ? 'lang-bn' : ''}`}>
       <Hero />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-extrabold text-gray-900">Latest Opportunities</h2>
-            <p className="mt-4 text-lg text-gray-500">Recently posted tuition jobs in your area.</p>
-          </div>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {MOCK_JOBS.slice(0, 3).map(job => (
-              <JobCard key={job.id} job={job} />
-            ))}
-          </div>
-      </div>
-    </>
+      <Features />
+      <HowItWorks />
+      <Testimonials />
+      <CTA />
+      <LandingFooter />
+    </div>
   );
 };
 

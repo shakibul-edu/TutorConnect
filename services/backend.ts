@@ -386,3 +386,105 @@ export async function deleteContactRequest(token: string, id: string) {
         return null;
     }
 }
+
+// --- Review APIs ---
+
+export async function getAllReviews(token: string) {
+    if (token) {
+        try {
+            const response = await FetchApi.get('/teacher-review/', {}, { 'Authorization': `Bearer ${token}` });
+            return response;
+        } catch (error) {
+            console.error('Error fetching all reviews:', error);
+            throw error;
+        }
+    } else {
+        console.warn('No token found, skipping server connection');
+        return null;
+    }
+}
+
+export async function getTeacherReviews(token: string, teacherId: string) {
+    if (token) {
+        try {
+            const response = await FetchApi.get(`/review-by-teacher/${teacherId}/`, {}, { 'Authorization': `Bearer ${token}` });
+            return response;
+        } catch (error) {
+            console.error('Error fetching teacher reviews:', error);
+            throw error;
+        }
+    } else {
+        console.warn('No token found, skipping server connection');
+        return null;
+    }
+}
+
+export async function submitReview(token: string, data: {
+    rating: number;
+    comment: string;
+    contact_request: number;
+}) {
+    if (token) {
+        try {
+            const response = await FetchApi.post('/teacher-review/', data, { 'Authorization': `Bearer ${token}` });
+            return response;
+        } catch (error) {
+            console.error('Error submitting review:', error);
+            throw error;
+        }
+    } else {
+        console.warn('No token found, skipping server connection');
+        return null;
+    }
+}
+
+export async function updateReview(token: string, id: number, data: {
+    rating: number;
+    comment: string;
+    contact_request: number;
+}) {
+    if (token) {
+        try {
+            const response = await FetchApi.put(`/teacher-review/${id}/`, data, { 'Authorization': `Bearer ${token}` });
+            return response;
+        } catch (error) {
+            console.error('Error updating review:', error);
+            throw error;
+        }
+    } else {
+        console.warn('No token found, skipping server connection');
+        return null;
+    }
+}
+
+export async function deleteReview(token: string, id: number) {
+    if (token) {
+        try {
+            const response = await FetchApi.delete(`/teacher-review/${id}/`, undefined, { 'Authorization': `Bearer ${token}` });
+            return response;
+        } catch (error) {
+            console.error('Error deleting review:', error);
+            throw error;
+        }
+    } else {
+        console.warn('No token found, skipping server connection');
+        return null;
+    }
+}
+
+// --- Dashboard APIs ---
+
+export async function getUserDashboardStats(token: string) {
+    if (token) {
+        try {
+            const response = await FetchApi.get('/user/dashboard/', {}, { 'Authorization': `Bearer ${token}` });
+            return response;
+        } catch (error) {
+            console.error('Error fetching dashboard stats:', error);
+            throw error;
+        }
+    } else {
+        console.warn('No token found, skipping server connection');
+        return null;
+    }
+}

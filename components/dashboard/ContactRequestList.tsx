@@ -1,7 +1,8 @@
 import React from 'react';
 import Link from 'next/link';
-import { ContactRequest } from '../../types';
-import { Phone, MessageSquare, Clock, CheckCircle, XCircle, Hourglass, User } from 'lucide-react';
+import { ContactRequest, TeacherReview } from '../../types';
+import { Phone, MessageSquare, Clock, CheckCircle, XCircle, Hourglass, User, Star } from 'lucide-react';
+import ContactRequestReviewModal from '../ContactRequestReviewModal';
 
 interface ContactRequestListProps {
   title: string;
@@ -10,6 +11,8 @@ interface ContactRequestListProps {
   loading?: boolean;
   onStatusChange?: (id: number, status: 'accepted' | 'rejected') => Promise<void> | void;
   actionLoadingId?: number | null;
+  reviews?: TeacherReview[];
+  onReviewSubmitted?: () => void;
 }
 
 const statusChip = (status: ContactRequest['status']) => {
@@ -27,7 +30,25 @@ const statusIcon = (status: ContactRequest['status']) => {
   return <Hourglass className="w-4 h-4 text-yellow-600" />;
 };
 
-const ContactRequestList: React.FC<ContactRequestListProps> = ({ title, requests, role, loading, onStatusChange, actionLoadingId }) => {
+const ContactRequestList: React.FC<ContactRequestListProps> = ({ title, requests, role, loading, onStatusChange, actionLoadingId, reviews = [], onReviewSubmitted }) => {
+  const [reviewModalOpen, setReviewModalOpen] = React.useState(false);
+  const [selectedRequestId, setSelectedRequestId] = React.useState<number | null>(null);
+  const [selectedRequestTeacher, setSelectedRequestTeacher] = React.useState<string>('');
+  const [selectedReview, setSelectedReview] = React.useState<TeacherReview | undefined>(undefined);
+
+  const handleOpenReviewModal = (requestId: number, teacherName: string, existingReview?: TeacherReview) => {
+    setSelectedRequestId(requestId);
+    setSelectedRequestTeacher(teacherName);
+    setSelectedReview(existingReview);
+    setReviewModalOpen(true);
+  };
+
+  const handleCloseReviewModal = () => {
+    setReviewModalOpen(false);
+    setSelectedRequestId(null);
+    setSelectedRequestTeacher('');
+    setSelectedReview(undefined);
+  };
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between bg-gray-50">
@@ -110,21 +131,80 @@ const ContactRequestList: React.FC<ContactRequestListProps> = ({ title, requests
                   </div>
                 )}
 
+                {role === 'teacher' && req.status === 'accepted' && (() => {
+                  const existingReview = reviews.find(r => r.contact_request === req.id);
+                  return existingReview ? (
+                    <div className="pt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                        <span className="text-sm font-semibold text-gray-900">Student Review</span>
+                        <span className="text-sm font-bold text-yellow-600">{existingReview.rating}/5</span>
+                      </div>
+                      <p className="text-sm text-gray-700 leading-relaxed italic">"{existingReview.comment}"</p>
+                      <p className="text-xs text-gray-500 mt-1">By {existingReview.student_name}</p>
+                    </div>
+                  ) : null;
+                })()}
+
                 {role === 'student' && (
-                  <div className="pt-2">
-                    <Link
-                      href={`/tutor-details/${req.teacher}`}
-                      className="inline-flex items-center justify-center px-3 py-2 rounded-md bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700"
-                    >
-                      View Tutor
-                    </Link>
-                  </div>
+                  <>
+                    <div className="pt-2 flex gap-3">
+                      <Link
+                        href={`/tutor-details/${req.teacher}`}
+                        className="flex-1 inline-flex items-center justify-center px-3 py-2 rounded-md bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700"
+                      >
+                        View Tutor
+                      </Link>
+                      {req.status === 'accepted' && (() => {
+                        const existingReview = reviews.find(r => r.contact_request === req.id);
+                        return (
+                          <button
+                            onClick={() => handleOpenReviewModal(req.id, `Teacher #${req.teacher}`, existingReview)}
+                            className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md text-white text-sm font-semibold ${
+                              existingReview ? 'bg-green-500 hover:bg-green-600' : 'bg-amber-500 hover:bg-amber-600'
+                            }`}
+                          >
+                            <Star className="w-4 h-4" />
+                            {existingReview ? 'View Review' : 'Add Review'}
+                          </button>
+                        );
+                      })()}
+                    </div>
+
+                    {req.status === 'accepted' && (() => {
+                      const existingReview = reviews.find(r => r.contact_request === req.id);
+                      return existingReview ? (
+                        <div className="pt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Star className="w-4 h-4 fill-blue-400 text-blue-400" />
+                            <span className="text-sm font-semibold text-gray-900">Your Review</span>
+                            <span className="text-sm font-bold text-blue-600">{existingReview.rating}/5</span>
+                          </div>
+                          <p className="text-sm text-gray-700 leading-relaxed italic">"{existingReview.comment}"</p>
+                          <p className="text-xs text-gray-500 mt-1">Submitted {new Date(existingReview.created_at).toLocaleDateString()}</p>
+                        </div>
+                      ) : null;
+                    })()}
+                  </>
                 )}
               </div>
             </div>
           ))}
         </div>
       )}
+
+      <ContactRequestReviewModal
+        isOpen={reviewModalOpen}
+        onClose={handleCloseReviewModal}
+        contactRequestId={selectedRequestId || 0}
+        tutorName={selectedRequestTeacher}
+        review={selectedReview}
+        readOnly={false}
+        onSuccess={() => {
+          handleCloseReviewModal();
+          if (onReviewSubmitted) onReviewSubmitted();
+        }}
+      />
     </div>
   );
 };

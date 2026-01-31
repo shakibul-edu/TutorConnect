@@ -4,10 +4,11 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useRouter } from '../../../lib/router';
 import { useSession } from 'next-auth/react';
-import { ArrowLeft, ShieldCheck, Clock, FileText, CheckCircle, XCircle, User, MapPin, DollarSign, Briefcase, Users } from 'lucide-react';
-import { getTeacherFullProfile } from '../../../services/backend';
+import { ArrowLeft, ShieldCheck, Clock, FileText, CheckCircle, XCircle, User, MapPin, DollarSign, Briefcase, Users, Star } from 'lucide-react';
+import { getTeacherFullProfile, getTeacherReviews } from '../../../services/backend';
 import { getBackendImageUrl } from '../../../utils/imageHelper';
 import ContactRequestModal from '@/components/ContactRequestModal';
+import { TeacherReview } from '../../../types';
 
 export default function TutorDetailsPage() {
     const params = useParams();
@@ -17,6 +18,8 @@ export default function TutorDetailsPage() {
     const [profileData, setProfileData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+    const [reviews, setReviews] = useState<TeacherReview[]>([]);
+    const [reviewsLoading, setReviewsLoading] = useState(false);
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -37,8 +40,17 @@ export default function TutorDetailsPage() {
                 if (response) {
                     setProfileData(response);
                 }
+                
+                // Fetch reviews
+                setReviewsLoading(true);
+                const reviewsData = await getTeacherReviews(backendAccess, id);
+                if (reviewsData && Array.isArray(reviewsData)) {
+                    setReviews(reviewsData);
+                }
+                setReviewsLoading(false);
             } catch (error) {
                 console.error("Error fetching teacher profile:", error);
+                setReviewsLoading(false);
             } finally {
                 setLoading(false);
             }
@@ -350,6 +362,72 @@ export default function TutorDetailsPage() {
                         </div>
                     ) : (
                         <p className="text-gray-500 text-sm p-4 bg-gray-50 rounded-md border border-gray-200">No qualifications added</p>
+                    )}
+                </div>
+
+                <hr className="border-gray-200" />
+
+                {/* Reviews Section */}
+                <div>
+                    <div className="mb-4">
+                        <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                            <Star className="w-5 h-5 text-yellow-500" />
+                            Reviews
+                        </h2>
+                        <p className="text-gray-500 text-sm">Student feedback and ratings</p>
+                    </div>
+
+                    {reviewsLoading ? (
+                        <div className="flex justify-center py-8">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                        </div>
+                    ) : reviews && reviews.length > 0 ? (
+                        <div className="space-y-4">
+                            {/* Average Rating */}
+                            <div className="flex items-center gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+                                <div className="flex items-center gap-1">
+                                    <Star className="w-6 h-6 fill-yellow-400 text-yellow-400" />
+                                    <span className="text-2xl font-bold text-gray-900">
+                                        {(reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)}
+                                    </span>
+                                </div>
+                                <span className="text-gray-600 text-sm">out of 5 ({reviews.length} {reviews.length === 1 ? 'review' : 'reviews'})</span>
+                            </div>
+
+                            {/* Individual Reviews */}
+                            <div className="space-y-3">
+                                {reviews.map((review) => (
+                                    <div key={review.id} className="p-4 bg-white border border-gray-200 rounded-md">
+                                        <div className="flex items-start justify-between mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
+                                                    <User className="w-4 h-4 text-indigo-600" />
+                                                </div>
+                                                <div>
+                                                    <p className="font-semibold text-gray-900 text-sm">{review.student_name}</p>
+                                                    <p className="text-xs text-gray-500">{new Date(review.created_at).toLocaleDateString()}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                {[1, 2, 3, 4, 5].map((star) => (
+                                                    <Star
+                                                        key={star}
+                                                        className={`w-4 h-4 ${
+                                                            star <= review.rating
+                                                                ? 'fill-yellow-400 text-yellow-400'
+                                                                : 'text-gray-300'
+                                                        }`}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <p className="text-gray-700 text-sm leading-relaxed">{review.comment}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ) : (
+                        <p className="text-gray-500 text-sm p-4 bg-gray-50 rounded-md border border-gray-200">No reviews yet</p>
                     )}
                 </div>
 

@@ -1,9 +1,9 @@
 
 import React, { useState } from 'react';
-import { JobPost, Bid, Review } from '../../types';
+import { JobPost, Bid, Review, DashboardStats } from '../../types';
 import { stateManager } from '../../services/stateManager';
 import StatCard from './StatCard';
-import { Briefcase, Users, CheckCircle, Star, Eye } from 'lucide-react';
+import { Briefcase, Users, CheckCircle, Star, Eye, Send } from 'lucide-react';
 import ReviewModal from '../ReviewModal';
 
 interface BuyerDashboardProps {
@@ -11,9 +11,10 @@ interface BuyerDashboardProps {
   totalBidsReceived: number;
   onRefresh: () => void;
   user: any;
+  stats?: DashboardStats | null;
 }
 
-const BuyerDashboard: React.FC<BuyerDashboardProps> = ({ myJobs, totalBidsReceived, onRefresh, user }) => {
+const BuyerDashboard: React.FC<BuyerDashboardProps> = ({ myJobs, totalBidsReceived, onRefresh, user, stats }) => {
   const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
   const [selectedBidForReview, setSelectedBidForReview] = useState<Bid | null>(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
@@ -51,10 +52,16 @@ const BuyerDashboard: React.FC<BuyerDashboardProps> = ({ myJobs, totalBidsReceiv
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <StatCard title="Active Posts" value={myJobs.filter(j => j.status === 'open').length} colorClass="bg-blue-600" icon={Briefcase} />
         <StatCard title="Total Bids" value={totalBidsReceived} colorClass="bg-purple-600" icon={Users} />
         <StatCard title="Hired Tutors" value={myJobs.filter(j => j.status === 'hired').length} colorClass="bg-emerald-500" icon={CheckCircle} />
+        <StatCard 
+          title="Requests Sent" 
+          value={stats?.total_contact_requests_sent ?? 0} 
+          colorClass="bg-amber-600" 
+          icon={Send} 
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

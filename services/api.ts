@@ -26,7 +26,7 @@ import {
   getQualification,
   getSlots
 } from '../utils/fetchFormInfo';
-import { User, JobPost, TeacherProfile, Bid, BidStatus } from '../types';
+import { User, JobPost, TeacherProfile, Bid, BidStatus, TeacherReview } from '../types';
 
 // Get auth token from localStorage or sessionStorage
 const getAuthToken = (): string | null => {
@@ -278,6 +278,52 @@ export const api = {
       const token = getAuthToken();
       if (token) {
         return await FetchApi.put<Bid>(`/bids/${bidId}/status/`, { status }, {'Authorization': `Bearer ${token}`});
+      }
+      throw new Error('No authentication token found');
+    }
+  },
+
+  reviews: {
+    getAll: async () => {
+      const token = getAuthToken();
+      try {
+        return await FetchApi.get<TeacherReview[]>('/teacher-review/', {}, token ? {'Authorization': `Bearer ${token}`} : {});
+      } catch (error) {
+        console.error('Error fetching reviews:', error);
+        return [];
+      }
+    },
+    getByTeacher: async (tutorId: string) => {
+      const token = getAuthToken();
+      try {
+        return await FetchApi.get<TeacherReview[]>(`/review-by-teacher/${tutorId}/`, {}, token ? {'Authorization': `Bearer ${token}`} : {});
+      } catch (error) {
+        console.error('Error fetching teacher reviews:', error);
+        return [];
+      }
+    },
+    create: async (reviewData: { rating: number; comment: string; contact_request: number }) => {
+      const token = getAuthToken();
+      if (token) {
+        return await FetchApi.post<TeacherReview>('/teacher-review/', reviewData, {'Authorization': `Bearer ${token}`});
+      }
+      throw new Error('No authentication token found');
+    },
+    getById: async (id: number) => {
+      const token = getAuthToken();
+      return await FetchApi.get<TeacherReview>(`/teacher-review/${id}/`, {}, token ? {'Authorization': `Bearer ${token}`} : {});
+    },
+    update: async (id: number, reviewData: { rating: number; comment: string }) => {
+      const token = getAuthToken();
+      if (token) {
+        return await FetchApi.put<TeacherReview>(`/teacher-review/${id}/`, reviewData, {'Authorization': `Bearer ${token}`});
+      }
+      throw new Error('No authentication token found');
+    },
+    delete: async (id: number) => {
+      const token = getAuthToken();
+      if (token) {
+        return await FetchApi.delete(`/teacher-review/${id}/`, {'Authorization': `Bearer ${token}`});
       }
       throw new Error('No authentication token found');
     }

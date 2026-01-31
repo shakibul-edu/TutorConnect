@@ -113,7 +113,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onApplyFilter, className = "" }) => {
              Tuition Type
            </legend>
             <div className="space-y-2">
-                {["All Tuition", "Online", "Home"].map((type) => (
+                {["Any", "Online", "Offline"].map((type) => (
                     <label key={type} className="flex items-center cursor-pointer">
                     <input
                         type="radio"

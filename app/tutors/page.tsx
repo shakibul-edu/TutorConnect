@@ -20,11 +20,12 @@ const TutorsPage: React.FC = () => {
     schedule: undefined,
     feeRange: 25000,
     gender: "Any",
-    tuitionType: "All Tuition",
+    tuitionType: "Any",
     distance: 20
   });
 
     const fetchTutors = async (appliedFilters: any = {}) => {
+        // appliedFilters.tuitionType = appliedFilters.tuitionType.toLowerCase();
         setLoading(true);
 
         // Wait for authenticated session before calling backend
