@@ -6,7 +6,6 @@ import Features from '../components/landing/Features';
 import HowItWorks from '../components/landing/HowItWorks';
 import Testimonials from '../components/landing/Testimonials';
 import CTA from '../components/landing/CTA';
-import LandingFooter from '../components/landing/LandingFooter';
 import { useLanguage } from '../contexts/LanguageContext';
 
 const HomePage: React.FC = () => {
@@ -19,7 +18,6 @@ const HomePage: React.FC = () => {
       <HowItWorks />
       <Testimonials />
       <CTA />
-      <LandingFooter />
     </div>
   );
 };

@@ -4,6 +4,7 @@ import React from 'react';
 import { Search } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { Link } from '../../lib/router';
+import Logo from '../Logo';
 
 const Hero: React.FC = () => {
   const { t } = useLanguage();
@@ -50,7 +51,7 @@ const Hero: React.FC = () => {
                 <span className="font-school">{t.hero.btnFind}</span>
               </Link>
               
-              <Link href="/register" className="w-full sm:w-auto px-8 py-4 bg-white text-slate-700 text-xl font-bold rounded-2xl border-2 border-slate-200 shadow-[0_6px_0_0_rgba(226,232,240,1)] active:shadow-none active:translate-y-[6px] hover:bg-slate-50 transition-all duration-150 flex items-center justify-center font-school">
+              <Link href="/profile-edit" className="w-full sm:w-auto px-8 py-4 bg-white text-slate-700 text-xl font-bold rounded-2xl border-2 border-slate-200 shadow-[0_6px_0_0_rgba(226,232,240,1)] active:shadow-none active:translate-y-[6px] hover:bg-slate-50 transition-all duration-150 flex items-center justify-center font-school">
                 {t.hero.btnTeach}
               </Link>
             </div>
@@ -79,10 +80,11 @@ const Hero: React.FC = () => {
                 alt="Student Studying with Books" 
                 className="relative z-10 w-full h-full object-contain drop-shadow-2xl transform transition-transform hover:-translate-y-4 duration-500"
               />
-              
-              {/* Floating Element 1 */}
-              <div className="absolute -top-10 -right-10 bg-white p-4 rounded-2xl shadow-xl border-2 border-slate-100 animate-bounce duration-[3000ms] z-20">
-                <span className="text-4xl">🅰️+</span>
+
+
+              {/* Floating Hero Logo (Replaces A+) */}
+              <div className="absolute -top-12 -right-8 bg-white/90 backdrop-blur-xl p-5 rounded-[2rem] shadow-2xl border border-white/50 animate-[bounce_4s_infinite] z-30">
+                <Logo className="w-24 h-24 drop-shadow-xl" />
               </div>
               
                {/* Floating Element 2 */}

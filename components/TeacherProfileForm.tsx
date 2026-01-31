@@ -9,6 +9,7 @@ import { AvailabilitySlot, Education, Qualification, Gender, TeachingMode, Mediu
 import { Save, Loader2, Upload, X } from 'lucide-react';
 import EducationSection from './profile-form/EducationSection';
 import QualificationSection from './profile-form/QualificationSection';
+import { useLanguage } from '../contexts/LanguageContext';
 import { 
     getMediums, 
     getGradesbyMedium, 
@@ -30,9 +31,77 @@ import {
     createAvailability
 } from '../services/backend';
 import Image from 'next/image';
+import { z } from 'zod';
+
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+
+export const educationSchema = z.object({
+    institution: z.string().min(1, "Institution is required"),
+    degree: z.string().min(1, "Degree is required"),
+    year: z.string().regex(/^\d{4}$/, "Year must be a 4-digit number"),
+    result: z.string().min(1, "Result/GPA is required"),
+    // Allow File or undefined/null (for existing entries that might not rely on file object here)
+    // We only validate size if it's a new file instance
+    certificate: z.custom<File | null | undefined>((val) => {
+        return val instanceof File || val === null || val === undefined;
+    }).refine((file) => {
+        if (file instanceof File) return file.size <= MAX_FILE_SIZE;
+        return true;
+    }, "File size must be less than 2MB")
+    .refine((file) => {
+        if (file instanceof File) return ACCEPTED_IMAGE_TYPES.includes(file.type);
+        return true;
+    }, "Only image files (JPEG, PNG, WEBP) are allowed")
+});
+
+export const qualificationSchema = z.object({
+    organization: z.string().min(1, "Organization is required"),
+    skill: z.string().min(1, "Skill/Certification name is required"),
+    year: z.string().regex(/^\d{4}$/, "Year must be a 4-digit number"),
+    result: z.string().optional(),
+    certificate: z.custom<File | null | undefined>((val) => {
+        return val instanceof File || val === null || val === undefined;
+    }).refine((file) => {
+        if (file instanceof File) return file.size <= MAX_FILE_SIZE;
+        return true;
+    }, "File size must be less than 2MB")
+    .refine((file) => {
+        if (file instanceof File) return ACCEPTED_IMAGE_TYPES.includes(file.type);
+        return true;
+    }, "Only image files (JPEG, PNG, WEBP) are allowed")
+});
+
+const profileSchema = z.object({
+  bio: z.string().min(50, "Bio must be at least 50 characters long to provide enough detail"),
+  phone: z.string().regex(/^(?:\+88|88)?(01[3-9]\d{8})$/, "Please enter a valid Bangladeshi phone number"),
+  minSalary: z.number().min(500, "Minimum salary must be at least 500"),
+  experience: z.number().min(0, "Experience cannot be negative"),
+  medium_list: z.array(z.number()).min(1, "At least one medium must be selected"),
+  grade_list: z.array(z.number()).min(1, "At least one class/grade must be selected"),
+  subject_list: z.array(z.number()).min(1, "At least one subject must be selected"),
+  profilePicture: z.custom<File | null | undefined>((val) => {
+        return val instanceof File || val === null || val === undefined;
+    }).refine((file) => {
+        if (file instanceof File) return file.size <= MAX_FILE_SIZE;
+        return true;
+    }, "Profile picture must be less than 2MB")
+    .refine((file) => {
+        if (file instanceof File) return ACCEPTED_IMAGE_TYPES.includes(file.type);
+        return true;
+    }, "Only image files (JPEG, PNG, WEBP) are allowed"),
+  education: z.array(educationSchema).max(3, "You can add a maximum of 3 education entries"),
+  qualifications: z.array(qualificationSchema).max(3, "You can add a maximum of 3 qualifications"),
+  availability: z.array(z.object({
+      start: z.string(),
+      end: z.string(),
+      days: z.array(z.string()).min(1, "Select at least one day for this slot")
+  })).min(1, "At least one availability slot is required")
+});
 
 const TeacherProfileForm: React.FC = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   // @ts-ignore
   const { data: session } = useSession();
   const { push } = useRouter();
@@ -43,6 +112,7 @@ const TeacherProfileForm: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [profilePicture, setProfilePicture] = useState<File | null>(null);
   const [profilePicturePreview, setProfilePicturePreview] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Form State
   const [bio, setBio] = useState('');
@@ -277,8 +347,44 @@ const TeacherProfileForm: React.FC = () => {
     }
     
     setSubmitting(true);
+    setErrors({});
 
     try {
+        // Validate with Zod
+        const validationData = {
+            bio,
+            phone,
+            minSalary,
+            experience,
+            medium_list: selectedMediums,
+            grade_list: selectedGrades,
+            subject_list: selectedSubjects,
+            profilePicture,
+            education: educationList,
+            qualifications: qualificationList,
+            availability
+        };
+
+        const result = profileSchema.safeParse(validationData);
+
+        if (!result.success) {
+            console.error("Validation failed", result);
+            const newErrors: Record<string, string> = {};
+            if (result.error && result.error.issues) {
+                result.error.issues.forEach(err => {
+                    // Map path to friendly string key
+                    // Examples: "bio", "education.0.institution"
+                    const path = err.path.join('.');
+                    newErrors[path] = err.message;
+                });
+            }
+            setErrors(newErrors);
+            toast.error("Please fix the errors in the form.");
+            setSubmitting(false);
+            // Scroll to top or first error could be good, but simple toast for now
+            return;
+        }
+
       const isNewProfile = !profileId;
       const profileChanged = isNewProfile || (() => {
         if (!initialProfile) return true;
@@ -294,7 +400,7 @@ const TeacherProfileForm: React.FC = () => {
           !arraysEqual(selectedMediums, initialProfile.medium_list) ||
           !arraysEqual(selectedGrades, initialProfile.grade_list) ||
           !arraysEqual(selectedSubjects, initialProfile.subject_list) ||
-          (profilePicture instanceof File) !== initialProfile.hasPicture
+          (profilePicture instanceof File)
         );
       })();
 
@@ -351,9 +457,9 @@ const TeacherProfileForm: React.FC = () => {
         profileData.append('gender', gender);
         profileData.append('teaching_mode', teachingMode);
         profileData.append('preferred_distance', String(distance));
-       selectedMediums.forEach(id => profileData.append('medium_list', String(id)));
-       selectedGrades.forEach(id => profileData.append('grade_list', String(id)));
-       selectedSubjects.forEach(id => profileData.append('subject_list', String(id)));
+       selectedMediums?.forEach(id => profileData.append('medium_list', String(id)));
+       selectedGrades?.forEach(id => profileData.append('grade_list', String(id)));
+       selectedSubjects?.forEach(id => profileData.append('subject_list', String(id)));
         profileData.append('highest_qualification', 'honours');
         
         if (profilePicture instanceof File) {
@@ -467,6 +573,86 @@ const TeacherProfileForm: React.FC = () => {
     }
   };
 
+  const handleAddEducation = async (newEdu: Education) => {
+    if (!profileId || !token) return;
+
+    try {
+        const formData = new FormData();
+        formData.append('institution', newEdu.institution);
+        formData.append('degree', newEdu.degree);
+        formData.append('graduation_year', newEdu.year);
+        formData.append('results', newEdu.result);
+        formData.append('teacher', String(profileId));
+        
+        if (newEdu.certificate instanceof File) {
+            formData.append('certificates', newEdu.certificate);
+        }
+
+        const response = await submitAcademicProfiles(token, formData);
+        
+        // Update local state with the returned object (which includes the new ID)
+        // Assuming response is the created object or list. 
+        // Based on typical backend patterns, it returns the created object.
+        // We need to map it back to our Education type if necessary.
+        const createdEdu: Education = {
+            id: response.id,
+            institution: response.institution,
+            degree: response.degree,
+            year: response.graduation_year,
+            result: response.results,
+            certificate: response.certificates
+        };
+
+        setEducationList([...educationList, createdEdu]);
+        setInitialEducationList([...initialEducationList, createdEdu]);
+        setInitialEducationIds([...initialEducationIds, createdEdu.id!]);
+        
+        toast.success("Education added successfully!");
+    } catch (error) {
+        console.error("Failed to add education", error);
+        toast.error("Failed to add education entry");
+        throw error; // Re-throw so child component implies failure
+    }
+  };
+
+  const handleAddQualification = async (newQual: Qualification) => {
+    if (!profileId || !token) return;
+
+    try {
+        const formData = new FormData();
+        formData.append('organization', newQual.organization);
+        formData.append('skill', newQual.skill);
+        formData.append('year', newQual.year);
+        formData.append('results', newQual.result || '');
+        formData.append('teacher', String(profileId));
+
+        if (newQual.certificate instanceof File) {
+            formData.append('certificates', newQual.certificate);
+        }
+
+        const response = await submitQualification(token, formData);
+        
+        const createdQual: Qualification = {
+            id: response.id,
+            organization: response.organization,
+            skill: response.skill,
+            year: response.year,
+            result: response.results,
+            certificate: response.certificates
+        };
+
+        setQualificationList([...qualificationList, createdQual]);
+        setInitialQualificationList([...initialQualificationList, createdQual]);
+        setInitialQualificationIds([...initialQualificationIds, createdQual.id!]);
+
+        toast.success("Qualification added successfully!");
+    } catch (error) {
+        console.error("Failed to add qualification", error);
+        toast.error("Failed to add qualification entry");
+        throw error;
+    }
+  };
+
   if(!session && !user) {
       return (
         <div className="flex flex-col items-center justify-center p-10 bg-gray-50 rounded-lg">
@@ -486,7 +672,7 @@ const TeacherProfileForm: React.FC = () => {
       
       <div>
         <h1 className="text-2xl font-bold text-gray-900 border-b pb-2">
-            {profileId ? 'Edit Teacher Profile' : 'Create Teacher Profile'}
+            {profileId ? t.actions.updateProfile : t.actions.createProfile}
         </h1>
         <p className="text-gray-500 mt-2">Update your information to attract the right students.</p>
       </div>
@@ -526,7 +712,9 @@ const TeacherProfileForm: React.FC = () => {
               title="Click to upload profile picture"
             />
           </div>
-          <p className="text-xs text-gray-500 text-center mt-2">Click on the image to upload a profile picture (JPG, PNG)</p>
+
+          <p className="text-xs text-gray-500 text-center mt-2">{t.profile.uploadPhoto}</p>
+          {errors.profilePicture && <p className="text-red-500 text-xs text-center mt-1">{errors.profilePicture}</p>}
         </div>
       </div>
 
@@ -537,30 +725,32 @@ const TeacherProfileForm: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t.profile.bio}</label>
             <textarea
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               rows={4}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              placeholder="Tell students about your teaching style and experience..."
+              placeholder={t.profile.bioPlaceholder}
             />
+            {errors.bio && <p className="text-red-500 text-xs mt-1">{errors.bio}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t.profile.phone}</label>
             <input
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              placeholder="Enter your phone number"
+              className={`w-full px-3 py-2 border ${errors.phone ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
+              placeholder={t.profile.phonePlaceholder}
             />
+            {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
           </div>
 
           <div>
              <div className="flex justify-between">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Minimum Salary Expectation</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t.profile.minSalary}</label>
                 <span className="text-sm font-bold text-indigo-600">{minSalary} BDT</span>
              </div>
              <input
@@ -576,7 +766,7 @@ const TeacherProfileForm: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Experience (Years)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t.profile.experience} ({t.profile.years})</label>
                 <input
                     type="number"
                     min={0}
@@ -584,9 +774,10 @@ const TeacherProfileForm: React.FC = () => {
                     onChange={(e) => setExperience(Number(e.target.value))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 />
+                {errors.experience && <p className="text-red-500 text-xs mt-1">{errors.experience}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t.profile.gender}</label>
                 <select
                     value={gender}
                     onChange={(e) => setGender(e.target.value as Gender)}
@@ -600,7 +791,7 @@ const TeacherProfileForm: React.FC = () => {
 
            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Teaching Mode</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t.profile.teachingMode}</label>
                 <select
                     value={teachingMode}
                     onChange={(e) => setTeachingMode(e.target.value as TeachingMode)}
@@ -629,41 +820,63 @@ const TeacherProfileForm: React.FC = () => {
         </div>
 
         <div className="space-y-6">
-            <MultiSelect 
-                label="Preferred Mediums"
-                options={mappedMediums} 
-                selectedIds={selectedMediums}
-                onChange={setSelectedMediums}
-                placeholder="Search Mediums..."
-            />
+            <div>
+                <MultiSelect 
+                    label={t.profile.medium}
+                    options={mappedMediums} 
+                    selectedIds={selectedMediums}
+                    onChange={setSelectedMediums}
+                    placeholder="Search Mediums..."
+                />
+                {errors['medium_list'] && <p className="text-red-500 text-xs mt-1">{errors['medium_list']}</p>}
+            </div>
 
-            <MultiSelect 
-                label="Classes / Grades"
-                options={mappedGrades}
-                selectedIds={selectedGrades}
-                onChange={setSelectedGrades}
-                placeholder="Search Classes..."
-            />
+            <div>
+                <MultiSelect 
+                    label={t.profile.class}
+                    options={mappedGrades}
+                    selectedIds={selectedGrades}
+                    onChange={setSelectedGrades}
+                    placeholder="Search Classes..."
+                />
+                {errors['grade_list'] && <p className="text-red-500 text-xs mt-1">{errors['grade_list']}</p>}
+            </div>
 
-            <MultiSelect 
-                label="Subjects"
-                options={mappedSubjects}
-                selectedIds={selectedSubjects}
-                onChange={setSelectedSubjects}
-                placeholder="Search Subjects..."
-            />
+            <div>
+                <MultiSelect 
+                    label={t.profile.subject}
+                    options={mappedSubjects}
+                    selectedIds={selectedSubjects}
+                    onChange={setSelectedSubjects}
+                    placeholder="Search Subjects..."
+                />
+                {errors['subject_list'] && <p className="text-red-500 text-xs mt-1">{errors['subject_list']}</p>}
+            </div>
 
             <div className="pt-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Weekly Availability</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{t.profile.availability}</label>
                 <Availability slots={availability} setSlots={setAvailability} />
+                {errors.availability && <p className="text-red-500 text-xs mt-1">{errors.availability}</p>}
             </div>
         </div>
       </div>
 
       <hr className="border-gray-200" />
-      <EducationSection educationList={educationList} setEducationList={setEducationList} />
+      <EducationSection 
+          educationList={educationList} 
+          setEducationList={setEducationList} 
+          error={errors.education}
+          profileId={profileId}
+          onAddEducation={handleAddEducation}
+      />
       <hr className="border-gray-200" />
-      <QualificationSection qualificationList={qualificationList} setQualificationList={setQualificationList} />
+      <QualificationSection 
+          qualificationList={qualificationList} 
+          setQualificationList={setQualificationList} 
+          error={errors.qualifications}
+          profileId={profileId}
+          onAddQualification={handleAddQualification}
+      />
 
       <div className="flex justify-end pt-4">
         <button
@@ -672,7 +885,7 @@ const TeacherProfileForm: React.FC = () => {
           className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-all"
         >
           {submitting ? <Loader2 className="animate-spin w-5 h-5 mr-2" /> : <Save className="w-5 h-5 mr-2" />}
-          {profileId ? 'Update Profile' : 'Create Profile'}
+          {profileId ? t.actions.updateProfile : t.actions.createProfile}
         </button>
       </div>
       </>

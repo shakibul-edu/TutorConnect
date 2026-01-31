@@ -1,14 +1,21 @@
 
 import React, { useState } from 'react';
 import { Qualification } from '../../types';
-import { FileText, X, Plus, Upload } from 'lucide-react';
+import { FileText, X, Plus, Upload, Loader2, Lock } from 'lucide-react';
+import { qualificationSchema } from '../TeacherProfileForm';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { toast } from 'react-hot-toast';
 
 interface QualificationSectionProps {
   qualificationList: Qualification[];
   setQualificationList: (list: Qualification[]) => void;
+  error?: string;
+  profileId: number | null;
+  onAddQualification: (qual: Qualification) => Promise<void>;
 }
 
-const QualificationSection: React.FC<QualificationSectionProps> = ({ qualificationList, setQualificationList }) => {
+const QualificationSection: React.FC<QualificationSectionProps> = ({ qualificationList, setQualificationList, error, profileId, onAddQualification }) => {
+  const { t } = useLanguage();
   const [newQualification, setNewQualification] = useState<Qualification>({
     skill: '',
     organization: '',
@@ -17,10 +24,31 @@ const QualificationSection: React.FC<QualificationSectionProps> = ({ qualificati
     certificate: undefined
   });
 
-  const addQualification = () => {
-    if (newQualification.skill && newQualification.organization) {
-      setQualificationList([...qualificationList, { ...newQualification }]);
-      setNewQualification({ skill: '', organization: '', year: '', result: '', certificate: undefined });
+  const [submitting, setSubmitting] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  const addQualification = async () => {
+    setLocalError(null);
+
+    const result = qualificationSchema.safeParse(newQualification);
+    if (!result.success) {
+        setLocalError(result.error.issues[0].message);
+        return;
+    }
+
+    if (!profileId) {
+        toast.error("Please create your profile first.");
+        return;
+    }
+
+    setSubmitting(true);
+    try {
+        await onAddQualification(newQualification);
+        setNewQualification({ skill: '', organization: '', year: '', result: '', certificate: undefined });
+    } catch (e) {
+        // Error handled in parent
+    } finally {
+        setSubmitting(false);
     }
   };
 
@@ -39,8 +67,9 @@ const QualificationSection: React.FC<QualificationSectionProps> = ({ qualificati
   return (
     <div>
       <div className="mb-4">
-        <h2 className="text-xl font-bold text-gray-900">Qualifications</h2>
+        <h2 className="text-xl font-bold text-gray-900">{t.qualification.title}</h2>
         <p className="text-gray-500 text-sm">Your professional qualifications and skills</p>
+        {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
       </div>
 
       {qualificationList.length > 0 && (
@@ -69,11 +98,21 @@ const QualificationSection: React.FC<QualificationSectionProps> = ({ qualificati
         </div>
       )}
 
-      <div className="bg-white border border-gray-200 rounded-lg p-5">
-        <h3 className="text-sm font-medium text-gray-900 mb-4 uppercase tracking-wide">Add New Qualification</h3>
+      <div className={`bg-white border border-gray-200 rounded-lg p-5 relative ${!profileId ? 'opacity-50 pointer-events-none' : ''}`}>
+        {!profileId && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-gray-50/50">
+                <div className="bg-white p-3 rounded-md shadow-md flex items-center gap-2 border border-gray-200">
+                    <Lock className="w-4 h-4 text-gray-500" />
+                    <span className="text-sm font-medium text-gray-700">{t.education.saveUnlock}</span>
+                </div>
+            </div>
+        )}
+        
+        <h3 className="text-sm font-medium text-gray-900 mb-4 uppercase tracking-wide">{t.qualification.title}</h3>
+        {localError && <p className="text-red-500 text-sm mb-3">{localError}</p>}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1">
-            <label className="text-xs font-medium text-gray-500">Skill / Certification Name</label>
+            <label className="text-xs font-medium text-gray-500">{t.qualification.skill} *</label>
             <input
               placeholder="e.g., IELTS, PMP, Python"
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500"
@@ -82,7 +121,7 @@ const QualificationSection: React.FC<QualificationSectionProps> = ({ qualificati
             />
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-medium text-gray-500">Organization</label>
+            <label className="text-xs font-medium text-gray-500">{t.qualification.organization} *</label>
             <input
               placeholder="Organization Name"
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500"
@@ -91,7 +130,7 @@ const QualificationSection: React.FC<QualificationSectionProps> = ({ qualificati
             />
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-medium text-gray-500">Result</label>
+            <label className="text-xs font-medium text-gray-500">{t.education.result} *</label>
             <input
               placeholder="Score / Grade"
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500"
@@ -100,25 +139,25 @@ const QualificationSection: React.FC<QualificationSectionProps> = ({ qualificati
             />
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-medium text-gray-500">Passing Year</label>
+            <label className="text-xs font-medium text-gray-500">{t.education.passingYear} *</label>
             <select
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500"
               value={newQualification.year}
               onChange={e => setNewQualification({ ...newQualification, year: e.target.value })}
             >
-              <option value="">Select Year</option>
+              <option value="">{t.actions.selectYear}</option>
               {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
             </select>
           </div>
           <div className="space-y-1 md:col-span-2">
-            <label className="text-xs font-medium text-gray-500">Certificate</label>
+            <label className="text-xs font-medium text-gray-500">{t.education.certificate}</label>
             <div className="flex items-center gap-2">
               <label className="cursor-pointer flex items-center justify-center w-full px-4 py-2 border border-gray-300 border-dashed rounded-md bg-gray-50 hover:bg-gray-100 transition-colors">
                 <Upload className="w-4 h-4 mr-2 text-gray-400" />
                 <span className="text-sm text-gray-600">
-                  {newQualification.certificate instanceof File ? newQualification.certificate.name : 'Upload Document'}
+                  {newQualification.certificate instanceof File ? newQualification.certificate.name : t.education.uploadDoc}
                 </span>
-                <input type="file" className="hidden" onChange={handleQualificationFileChange} />
+                <input type="file" className="hidden" accept="image/*" onChange={handleQualificationFileChange} />
               </label>
             </div>
           </div>
@@ -127,10 +166,11 @@ const QualificationSection: React.FC<QualificationSectionProps> = ({ qualificati
           <button
             type="button"
             onClick={addQualification}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+            disabled={submitting}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-70"
           >
-            <Plus className="w-4 h-4 mr-2" />
-            Save & Add Another
+            {submitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
+            {t.actions.saveAdd}
           </button>
         </div>
       </div>

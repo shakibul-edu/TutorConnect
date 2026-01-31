@@ -10,7 +10,9 @@ const translations = {
       features: "Features",
       howItWorks: "How it Works",
       reviews: "Reviews",
-      getStarted: "Get Started"
+      getStarted: "Get Started",
+      findTutors: "Find Tutors",
+      tuitionJobs: "Tuition Jobs",
     },
     hero: {
       tag: "Classes starting nearby!",
@@ -23,7 +25,7 @@ const translations = {
       social: "Join 5,000+ happy students"
     },
     features: {
-      tag: "Why Choose TutorLink",
+      tag: "Why Choose E-Tuition",
       title: "Smart Tools for",
       titleHighlight: "Smarter Learning",
       desc: "We've done the homework so you don't have to. Focus on learning, we'll handle the logistics.",
@@ -55,7 +57,7 @@ const translations = {
       subtitle: "See what our community wrote on the class board.",
       r1: "I found a math tutor just 2 streets away! The auto-location is a lifesaver. Best app for students!",
       r1Role: "Student",
-      r2: "As a tutor, getting students was hard. With TutorLink, I get inquiries from my neighborhood without ads.",
+      r2: "As a tutor, getting students was hard. With E-Tuition, I get inquiries from my neighborhood without ads.",
       r2Role: "Physics Tutor",
       r3: "The scheduled search is genius. I only see tutors who are free when I am. It saves so much time.",
       r3Role: "University Student"
@@ -76,7 +78,48 @@ const translations = {
       c2: ["About Us", "Careers", "Blog", "Contact"],
       placeholder: "Enter your email",
       btn: "Join",
-      copy: "© 2024 TutorLink Inc. All rights reserved."
+      copy: "© 2024 E-Tuition. All rights reserved."
+    },
+    profile: {
+      personalInfo: "Personal Information",
+      bio: "Bio",
+      bioPlaceholder: "Tell students about your teaching style and experience...",
+      phone: "Phone Number",
+      phonePlaceholder: "Enter your phone number",
+      minSalary: "Minimum Salary",
+      experience: "Total Experience",
+      years: "Years",
+      gender: "Gender",
+      teachingMode: "Teaching Mode",
+      distance: "Preferred Distance (Km)",
+      medium: "Medium",
+      class: "Class/Grade",
+      subject: "Subject",
+      availability: "Availability",
+      uploadPhoto: "Click on the image to upload a profile picture (JPG, PNG)",
+    },
+    education: {
+      title: "Add New Academic Profile",
+      degree: "Degree",
+      institution: "Institution",
+      passingYear: "Passing Year",
+      result: "Result",
+      certificate: "Certificate",
+      uploadDoc: "Upload Document",
+      saveUnlock: "Save profile to unlock"
+    },
+    qualification: {
+      title: "Add New Qualification",
+      skill: "Skill / Certification Name",
+      organization: "Organization",
+    },
+    actions: {
+      save: "Save",
+      cancel: "Cancel",
+      updateProfile: "Update Profile",
+      createProfile: "Create Profile",
+      saveAdd: "Save & Add Another",
+      selectYear: "Select Year"
     }
   },
   bn: {
@@ -84,7 +127,9 @@ const translations = {
       features: "বৈশিষ্ট্য",
       howItWorks: "কিভাবে কাজ করে",
       reviews: "মতামত",
-      getStarted: "শুরু করুন"
+      getStarted: "শুরু করুন",
+      findTutors: "শিক্ষক খুঁজুন",
+      tuitionJobs: "টিউশন চাকরি",
     },
     hero: {
       tag: "কাছাকাছি ক্লাস শুরু হচ্ছে!",
@@ -97,7 +142,7 @@ const translations = {
       social: "৫,০০০+ সুখী শিক্ষার্থীদের সাথে যোগ দিন"
     },
     features: {
-      tag: "কেন টিউটরলিঙ্ক বেছে নেবেন",
+      tag: "কেন E-Tuition বেছে নেবেন",
       title: "স্মার্ট শিক্ষার জন্য",
       titleHighlight: "স্মার্ট টুলস",
       desc: "আমরা আপনার কাজ সহজ করে দিয়েছি। আপনি পড়াশোনায় মনোযোগ দিন, বাকিটা আমরা দেখব।",
@@ -129,7 +174,7 @@ const translations = {
       subtitle: "দেখুন আমাদের কমিউনিটি কি বলছে।",
       r1: "আমি মাত্র ২ রাস্তা পরেই একজন গণিত শিক্ষক পেয়েছি! অটো-লোকেশন ফিচারটি দুর্দান্ত। শিক্ষার্থীদের জন্য সেরা অ্যাপ!",
       r1Role: "শিক্ষার্থী",
-      r2: "একজন শিক্ষক হিসেবে ছাত্র পাওয়া কঠিন ছিল। টিউটরলিঙ্কের মাধ্যমে, আমি কোনো বিজ্ঞাপন ছাড়াই আমার এলাকা থেকে ইনকুয়ারি পাচ্ছি।",
+      r2: "একজন শিক্ষক হিসেবে ছাত্র পাওয়া কঠিন ছিল। E-Tuition এর মাধ্যমে, আমি কোনো বিজ্ঞাপন ছাড়াই আমার এলাকা থেকে ইনকুয়ারি পাচ্ছি।",
       r2Role: "পদার্থবিজ্ঞান শিক্ষক",
       r3: "শিডিউল সার্চ ফিচারটি অসাধারণ। আমি কেবল তাদেরই দেখি যারা আমার ফ্রি সময়ে ফ্রি আছেন। এটি অনেক সময় বাঁচায়।",
       r3Role: "বিশ্ববিদ্যালয় শিক্ষার্থী"
@@ -150,7 +195,48 @@ const translations = {
       c2: ["আমাদের সম্পর্কে", "ক্যারিয়ার", "ব্লগ", "যোগাযোগ"],
       placeholder: "আপনার ইমেইল দিন",
       btn: "যোগ দিন",
-      copy: "© ২০২৪ টিউটরলিঙ্ক ইংক। সর্বস্বত্ব সংরক্ষিত।"
+      copy: "© ২০২৪ E-Tuition । সর্বস্বত্ব সংরক্ষিত।"
+    },
+    profile: {
+      personalInfo: "ব্যক্তিগত তথ্য",
+      bio: "নিজের সম্পর্কে",
+      bioPlaceholder: "শিক্ষার্থীদের আপনার সম্পর্কে বলুন...",
+      phone: "ফোন নম্বর",
+      phonePlaceholder: "আপনার ফোন নম্বর দিন",
+      minSalary: "সর্বনিম্ন বেতন",
+      experience: "মোট অভিজ্ঞতা",
+      years: "বছর",
+      gender: "লিঙ্গ",
+      teachingMode: "শেখানোর পদ্ধতি",
+      distance: "পছন্দসই দূরত্ব (কিমি)",
+      medium: "মাধ্যম",
+      class: "শ্রেণী",
+      subject: "বিষয়",
+      availability: "সময়সূচী",
+      uploadPhoto: "প্রোফাইল ছবি আপলোড করতে ইমেজে ক্লিক করুন (JPG, PNG)",
+    },
+    education: {
+      title: "নতুন শিক্ষাগত যোগ্যতা যোগ করুন",
+      degree: "ডিগ্রী",
+      institution: "প্রতিষ্ঠান",
+      passingYear: "পাসের বছর",
+      result: "ফলাফল",
+      certificate: "সার্টিফিকেট",
+      uploadDoc: "ডকুমেন্ট আপলোড করুন",
+      saveUnlock: "আনলক করতে প্রোফাইল সেভ করুন"
+    },
+    qualification: {
+      title: "নতুন যোগ্যতা যোগ করুন",
+      skill: "দক্ষতা / সার্টিফিকেশনের নাম",
+      organization: "প্রতিষ্ঠান",
+    },
+    actions: {
+      save: "সেভ করুন",
+      cancel: "বাতিল করুন",
+      updateProfile: "প্রোফাইল আপডেট করুন",
+      createProfile: "প্রোফাইল তৈরি করুন",
+      saveAdd: "সেভ করুন এবং আরেকটি যোগ করুন",
+      selectYear: "বছর নির্বাচন করুন"
     }
   }
 };

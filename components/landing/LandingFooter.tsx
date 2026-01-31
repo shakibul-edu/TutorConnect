@@ -1,9 +1,10 @@
 'use client';
 
 import React from 'react';
-import { MapPin, Facebook, Twitter, Instagram, Linkedin } from 'lucide-react';
+import { Facebook, Twitter, Instagram, Linkedin } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { Link } from '../../lib/router';
+import Logo from '../Logo';
 
 const LandingFooter: React.FC = () => {
   const { t } = useLanguage();
@@ -21,10 +22,8 @@ const LandingFooter: React.FC = () => {
           {/* Brand */}
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center text-white">
-                <MapPin className="w-5 h-5" />
-              </div>
-              <span className="text-xl font-bold">TutorLink</span>
+              <Logo className="w-10 h-10" />
+              <span className="text-xl font-bold">E-Tuition</span>
             </div>
             <p className="text-slate-400 text-sm leading-relaxed">
               {t.footer.desc}
@@ -39,7 +38,7 @@ const LandingFooter: React.FC = () => {
                <li><Link href="/tutors" className="hover:text-white transition-colors">Browse Tutors</Link></li>
                <li><a href="#how-it-works" className="hover:text-white transition-colors">How it Works</a></li>
                <li><a href="#" className="hover:text-white transition-colors">Pricing</a></li>
-               <li><Link href="/register" className="hover:text-white transition-colors">For Tutors</Link></li>
+               <li><Link href="/profile-edit" className="hover:text-white transition-colors">For Tutors</Link></li>
             </ul>
           </div>
 

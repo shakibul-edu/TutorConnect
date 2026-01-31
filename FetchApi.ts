@@ -18,7 +18,7 @@ export interface FetchApiOptions {
 }
 
 export class FetchApi {
-    private static baseUrl: string = process.env.BASE_URL || '127.0.0.1:8000';
+    private static baseUrl: string = process.env.BASE_URL || 'https://tutoriaend.shakibul.me';
 
     /**
      * Parse error response from backend API
@@ -38,18 +38,18 @@ export class FetchApi {
 
         // Format 2: Field-based validation errors
         const errorMessages: string[] = [];
-        
+
         for (const [field, messages] of Object.entries(errorData)) {
             if (Array.isArray(messages)) {
                 // Capitalize and format field name (e.g., "student_name" -> "Student name")
                 const fieldName = field
                     .split('_')
-                    .map((word, index) => index === 0 
-                        ? word.charAt(0).toUpperCase() + word.slice(1) 
+                    .map((word, index) => index === 0
+                        ? word.charAt(0).toUpperCase() + word.slice(1)
                         : word.toLowerCase()
                     )
                     .join(' ');
-                
+
                 messages.forEach((msg: string) => {
                     errorMessages.push(`${fieldName}: ${msg}`);
                 });
@@ -57,23 +57,36 @@ export class FetchApi {
                 // Handle single string error for a field
                 const fieldName = field
                     .split('_')
-                    .map((word, index) => index === 0 
-                        ? word.charAt(0).toUpperCase() + word.slice(1) 
+                    .map((word, index) => index === 0
+                        ? word.charAt(0).toUpperCase() + word.slice(1)
                         : word.toLowerCase()
                     )
                     .join(' ');
                 errorMessages.push(`${fieldName}: ${messages}`);
             }
         }
-        
+
         return errorMessages.length > 0 ? errorMessages.join('\n') : fallbackMessage;
     }
 
     private static buildEndpointUrl(endpoint: string): string {
-        if (!this.baseUrl) {
-            throw new Error('Base URL is not set. Use FetchApi.setBaseUrl(url) first.');
+        // If endpoint is already a full URL, return it
+        if (endpoint.startsWith('http')) return endpoint;
+
+        let url = this.baseUrl;
+        if (!url.startsWith('http')) {
+            url = `http://${url}`;
         }
-        return `${this.baseUrl}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+
+        // Remove trailing slash from base if present
+        if (url.endsWith('/')) {
+            url = url.slice(0, -1);
+        }
+
+        // Remove leading slash from endpoint if present
+        const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+
+        return `${url}/${cleanEndpoint}`;
     }
 
     private static buildUrl(url: string, params?: Record<string, string | number>): string {
@@ -93,18 +106,21 @@ export class FetchApi {
 
         const fetchOptions: RequestInit = {
             method,
-            headers: isFormData ? {...headers } : {
-            'Content-Type': 'application/json',
-            ...headers,
+            headers: isFormData ? { ...headers } : {
+                'Content-Type': 'application/json',
+                ...headers,
             },
         };
 
         if (body && method !== 'GET') {
             fetchOptions.body = isFormData ? body : JSON.stringify(body);
         }
+        if (url.includes('undefined')) {
+            console.error('Invalid URL constructed:', fetchUrl);
+        }
         console.log('FetchApi Request:', { url: fetchUrl, options: fetchOptions });
         const response = await fetch(fetchUrl, fetchOptions);
-        
+
         // Handle 401 Unauthorized - token is invalid/expired
         if (response.status === 401) {
             console.log('Received 401 Unauthorized - triggering re-authentication');
@@ -112,8 +128,8 @@ export class FetchApi {
                 onUnauthorizedCallback();
             }
         }
-        
-        if (response.status === 204){
+
+        if (response.status === 204) {
             return null as T;
         }
         // const responseText = await response.text();
@@ -135,12 +151,12 @@ export class FetchApi {
     }
 
 
-      
+
     static get<T = any>(endpoint: string, params?: Record<string, string | number>, headers?: Record<string, string>, body?: any) {
         return this.request<T>(endpoint, { method: 'GET', params, headers, body });
     }
 
-    static post<T = any>(endpoint: string, body?: any, headers?: Record<string, string>,params?: Record<string, string | number>, isFormData: boolean = false) {
+    static post<T = any>(endpoint: string, body?: any, headers?: Record<string, string>, params?: Record<string, string | number>, isFormData: boolean = false) {
         return this.request<T>(endpoint, { method: 'POST', body, headers, params, isFormData });
     }
 

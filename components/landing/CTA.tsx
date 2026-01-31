@@ -47,7 +47,7 @@ const CTA: React.FC = () => {
               <span className="relative z-10">{t.cta.btn1}</span>
               <div className="absolute inset-0 bg-slate-800 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></div>
             </Link>
-            <Link href="/register" className="flex items-center text-slate-900 font-bold text-lg hover:underline decoration-2 underline-offset-4 transition-colors px-6 py-4 bg-white/50 rounded-2xl hover:bg-white border-2 border-slate-900/10 hover:border-slate-900">
+            <Link href="/profile-edit" className="flex items-center text-slate-900 font-bold text-lg hover:underline decoration-2 underline-offset-4 transition-colors px-6 py-4 bg-white/50 rounded-2xl hover:bg-white border-2 border-slate-900/10 hover:border-slate-900">
               <span>{t.cta.btn2}</span>
               <ArrowRight className="ml-2 w-6 h-6" />
             </Link>

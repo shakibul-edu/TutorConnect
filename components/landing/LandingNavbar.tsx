@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Menu, X, MapPin, User as UserIcon, LayoutDashboard, RefreshCw, LogOut, Bell, Search } from 'lucide-react';
+import { Menu, X, User as UserIcon, LayoutDashboard, RefreshCw, LogOut, Bell, Search } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { Link, useRouter } from '../../lib/router';
 import { useAuth } from '../../lib/auth';
 import { useSession, signOut } from 'next-auth/react';
+import Logo from '../Logo';
 
 const LandingNavbar: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -38,7 +39,7 @@ const LandingNavbar: React.FC = () => {
 
     // Display session user if available, otherwise fall back to app user
   const displayUser = session?.user || user;
-  const displayName = displayUser?.name || (user ? `${user.first_name} ${user.last_name}` : '');
+  const displayName = session?.user?.name || (user ? `${user.first_name} ${user.last_name}` : '');
   const displayEmail = displayUser?.email || user?.email || '';
   const displayImage = displayUser?.image || '';
 
@@ -48,18 +49,16 @@ const LandingNavbar: React.FC = () => {
         <div className="flex justify-between items-center">
           {/* Logo */}
           <div className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-brand-400/50 transform -rotate-3">
-              <MapPin className="w-6 h-6" />
-            </div>
+            <Logo className="w-12 h-12" />
             <span className="text-2xl font-bold tracking-tight text-slate-900 font-display">
-              Tutor<span className="text-brand-600">Link</span>
+              E-<span className="text-brand-600">Tuition</span>
             </span>
           </div>
 
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-8">
-            <Link href="jobs" className="text-slate-600 hover:text-brand-600 font-medium transition-colors cursor-pointer">Tuition Jobs</Link>
-            <Link href="tutors" className="text-slate-600 hover:text-brand-600 font-medium transition-colors cursor-pointer">Find Tutors</Link>
+            <Link href="jobs" className="text-slate-600 hover:text-brand-600 font-medium transition-colors cursor-pointer">{t.nav.tuitionJobs}</Link>
+            <Link href="tutors" className="text-slate-600 hover:text-brand-600 font-medium transition-colors cursor-pointer">{t.nav.findTutors}</Link>
             <a href="#features" className="text-slate-600 hover:text-brand-600 font-medium transition-colors cursor-pointer">{t.nav.features}</a>
             <a href="#how-it-works" className="text-slate-600 hover:text-brand-600 font-medium transition-colors cursor-pointer">{t.nav.howItWorks}</a>
             <a href="#reviews" className="text-slate-600 hover:text-brand-600 font-medium transition-colors cursor-pointer">{t.nav.reviews}</a>

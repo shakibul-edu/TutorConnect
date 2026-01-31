@@ -5,7 +5,6 @@ import { Link, usePathname, useRouter } from '../lib/router';
 import { useAuth } from '../lib/auth';
 import { useSession, signOut } from 'next-auth/react';
 import { 
-  MapPin, 
   User as UserIcon, 
   LayoutDashboard, 
   RefreshCw, 
@@ -13,9 +12,10 @@ import {
   Bell, 
   Menu, 
   X,
-  GraduationCap
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import useLocation from '../LocationHook';
+import Logo from './Logo';
 
 const Navbar: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -24,6 +24,7 @@ const Navbar: React.FC = () => {
   
   const { user, logout, openAuthModal, toggleUserMode } = useAuth();
   const { data: session } = useSession();
+  useLocation(session);
   const { push } = useRouter();
   const pathname = usePathname();
 
@@ -76,26 +77,20 @@ const Navbar: React.FC = () => {
         <div className="flex justify-between items-center">
           {/* Logo */}
           <Link href="home" className="flex items-center space-x-2 cursor-pointer no-underline">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg transform -rotate-3 transition-colors ${user?.is_teacher ? 'bg-indigo-600 shadow-indigo-400/50' : 'bg-brand-600 shadow-brand-400/50'}`}>
-              {user?.is_teacher ? <GraduationCap className="w-6 h-6" /> : <MapPin className="w-6 h-6" />}
-            </div>
+            <Logo className="w-12 h-12" />
             <span className={`text-2xl font-bold tracking-tight font-display ${logoTextClass}`}>
-              Tutor<span className={user?.is_teacher ? 'text-indigo-600' : 'text-brand-600'}>Link</span>
+              E-<span className={user?.is_teacher ? 'text-indigo-600' : 'text-brand-600'}>Tuition</span>
             </span>
           </Link>
 
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-8">
-            <Link href="jobs" className={`${textColorClass} font-medium transition-colors cursor-pointer`}>Tuition Jobs</Link>
-            <Link href="tutors" className={`${textColorClass} font-medium transition-colors cursor-pointer`}>Find Tutors</Link>
+            <Link href="/jobs" className={`${textColorClass} font-medium transition-colors cursor-pointer`}>{t.nav.tuitionJobs}</Link>
+            <Link href="/tutors" className={`${textColorClass} font-medium transition-colors cursor-pointer`}>{t.nav.findTutors}</Link>
             
-            {/* Show landing page links only on home page */}
-            {isHomePage && (
-              <>
-                <a href="#features" className={`${textColorClass} font-medium transition-colors cursor-pointer`}>{t.nav.features}</a>
-                <a href="#how-it-works" className={`${textColorClass} font-medium transition-colors cursor-pointer`}>{t.nav.howItWorks}</a>
-              </>
-            )}
+            <a href="/#features" className={`${textColorClass} font-medium transition-colors cursor-pointer`}>{t.nav.features}</a>
+            <a href="/#how-it-works" className={`${textColorClass} font-medium transition-colors cursor-pointer`}>{t.nav.howItWorks}</a>
+            
             
             {/* Language Toggle */}
             <button 
@@ -231,15 +226,11 @@ const Navbar: React.FC = () => {
       {isMobileMenuOpen && (
         <div className="md:hidden absolute top-full left-0 w-full bg-white border-b border-slate-100 shadow-xl p-4 flex flex-col space-y-4 max-h-[80vh] overflow-y-auto">
           <Link href="home" className="text-slate-600 hover:text-brand-600 font-medium p-2 block" onClick={() => setIsMobileMenuOpen(false)}>Home</Link>
-          <Link href="jobs" className="text-slate-600 hover:text-brand-600 font-medium p-2 block" onClick={() => setIsMobileMenuOpen(false)}>Tuition Jobs</Link>
-          <Link href="tutors" className="text-slate-600 hover:text-brand-600 font-medium p-2 block" onClick={() => setIsMobileMenuOpen(false)}>Find Tutors</Link>
+          <Link href="/jobs" className="text-slate-600 hover:text-brand-600 font-medium p-2 block" onClick={() => setIsMobileMenuOpen(false)}>Tuition Jobs</Link>
+          <Link href="/tutors" className="text-slate-600 hover:text-brand-600 font-medium p-2 block" onClick={() => setIsMobileMenuOpen(false)}>Find Tutors</Link>
           
-          {isHomePage && (
-            <>
-               <a href="#features" className="text-slate-600 hover:text-brand-600 font-medium p-2 block" onClick={() => setIsMobileMenuOpen(false)}>{t.nav.features}</a>
-               <a href="#how-it-works" className="text-slate-600 hover:text-brand-600 font-medium p-2 block" onClick={() => setIsMobileMenuOpen(false)}>{t.nav.howItWorks}</a>
-            </>
-          )}
+          <a href="/#features" className="text-slate-600 hover:text-brand-600 font-medium p-2 block" onClick={() => setIsMobileMenuOpen(false)}>{t.nav.features}</a>
+          <a href="/#how-it-works" className="text-slate-600 hover:text-brand-600 font-medium p-2 block" onClick={() => setIsMobileMenuOpen(false)}>{t.nav.howItWorks}</a>
 
           {displayUser ? (
              <div className="pt-4 border-t border-gray-100">
