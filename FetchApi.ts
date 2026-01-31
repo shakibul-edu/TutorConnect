@@ -118,7 +118,7 @@ export class FetchApi {
         if (url.includes('undefined')) {
             console.error('Invalid URL constructed:', fetchUrl);
         }
-        console.log('FetchApi Request:', { url: fetchUrl, options: fetchOptions });
+
         const response = await fetch(fetchUrl, fetchOptions);
 
         // Handle 401 Unauthorized - token is invalid/expired

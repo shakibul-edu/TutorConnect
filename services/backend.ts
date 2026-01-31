@@ -135,7 +135,7 @@ export async function getSlots(token: string) {
     if (token) {
         try {
             const response = await FetchApi.get('/availability/', {}, { 'Authorization': `Bearer ${token}` });
-            console.log('Response availability:', response);
+
             return response;
         } catch (error) {
             console.error('Error connecting to server:', error);

@@ -6,7 +6,8 @@ import { signIn } from 'next-auth/react';
 import { LogIn } from 'lucide-react';
 import AuthModal from '@/components/AuthModal';
 
-export default function SignInPage() {
+
+function SignInContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
@@ -54,5 +55,13 @@ export default function SignInPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <React.Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <SignInContent />
+    </React.Suspense>
   );
 }

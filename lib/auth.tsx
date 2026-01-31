@@ -28,7 +28,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Set up 401 handler to trigger re-authentication
   useEffect(() => {
     setUnauthorizedCallback(() => {
-      console.log('Token invalid, triggering re-authentication...');
+
       signIn('google');
     });
   }, []);

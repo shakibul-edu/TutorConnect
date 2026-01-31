@@ -1,4 +1,4 @@
-
+'use client';
 import React, { useState } from 'react';
 import { X, Send } from 'lucide-react';
 import { JobPost, TeacherProfile } from '../types';

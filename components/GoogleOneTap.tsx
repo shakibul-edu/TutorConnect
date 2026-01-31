@@ -27,7 +27,7 @@ const GoogleOneTap = () => {
           client_id: clientId,
           callback: async (response: any) => {
             try {
-              console.log('📤 One Tap response received');
+
               const result = await signIn('google-onetap', {
                 credential: response.credential,
                 redirect: false,

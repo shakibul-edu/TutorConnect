@@ -18,7 +18,7 @@ export class FetchApi {
 
     private static async getAuthToken(): Promise<string | null> {
         if (typeof window === 'undefined') return null;
-        
+
         const session = await getSession();
         return session?.backendAccess || null;
     }
@@ -52,21 +52,21 @@ export class FetchApi {
         const fetchOptions: RequestInit = {
             method,
             headers: isFormData ? { ...authHeaders } : {
-            'Content-Type': 'application/json',
-            ...authHeaders,
+                'Content-Type': 'application/json',
+                ...authHeaders,
             },
         };
 
         if (body && method !== 'GET') {
             fetchOptions.body = isFormData ? body : JSON.stringify(body);
         }
-        
-        console.log('FetchApi Request:', { url: fetchUrl, options: fetchOptions });
-        
+
+
+
         try {
             const response = await fetch(fetchUrl, fetchOptions);
-            
-            if (response.status === 204){
+
+            if (response.status === 204) {
                 return null as T;
             }
 
@@ -82,10 +82,10 @@ export class FetchApi {
                 } catch (e) {
                     // Ignore JSON parse errors, use default message
                 }
-                
+
                 // Show toast for error - strictly client side, will be ignored if on server (toast implementation is safe)
                 if (typeof window !== 'undefined') {
-                     toast.error(errorMessage);
+                    toast.error(errorMessage);
                 }
                 throw new Error(errorMessage);
             }
@@ -96,19 +96,19 @@ export class FetchApi {
             const msg = error.message || 'Network request failed';
             // Avoid double toasting if we already threw with a message above
             if ((!error.message || error.message === 'Failed to fetch') && typeof window !== 'undefined') {
-                 toast.error('Network error: Unable to connect to server');
+                toast.error('Network error: Unable to connect to server');
             }
             throw error;
         }
     }
 
 
-      
+
     static get<T = any>(endpoint: string, params?: Record<string, string | number>, headers?: Record<string, string>, body?: any) {
         return this.request<T>(endpoint, { method: 'GET', params, headers, body });
     }
 
-    static post<T = any>(endpoint: string, body?: any, headers?: Record<string, string>,params?: Record<string, string | number>, isFormData: boolean = false) {
+    static post<T = any>(endpoint: string, body?: any, headers?: Record<string, string>, params?: Record<string, string | number>, isFormData: boolean = false) {
         return this.request<T>(endpoint, { method: 'POST', body, headers, params, isFormData });
     }
 

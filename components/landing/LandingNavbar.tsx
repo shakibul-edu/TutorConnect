@@ -7,6 +7,7 @@ import { Link, useRouter } from '../../lib/router';
 import { useAuth } from '../../lib/auth';
 import { useSession, signOut } from 'next-auth/react';
 import Logo from '../Logo';
+import Image from 'next/image';
 
 const LandingNavbar: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -68,10 +69,12 @@ const LandingNavbar: React.FC = () => {
               onClick={toggleLanguage}
               className="flex items-center space-x-2 px-4 py-2 rounded-full border border-slate-200 hover:bg-slate-50 transition-all shadow-sm hover:shadow-md group bg-white"
             >
-              <img 
+              <Image 
                 src={language === 'en' ? "https://flagcdn.com/w40/us.png" : "https://flagcdn.com/w40/bd.png"} 
                 alt={language === 'en' ? "USA Flag" : "Bangladesh Flag"} 
                 className="w-6 h-4 object-cover rounded shadow-sm group-hover:scale-110 transition-transform"
+                width={24}
+                height={16}
               />
               <span className="text-sm font-bold text-slate-700 uppercase tracking-wide">{language}</span>
             </button>
@@ -82,10 +85,12 @@ const LandingNavbar: React.FC = () => {
                  <div className="relative group">
                     <button className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900 focus:outline-none bg-white/50 p-1 rounded-full border-2 border-transparent hover:border-brand-200 transition-all">
                       {displayImage ? (
-                        <img 
+                        <Image 
                           src={displayImage} 
                           alt="User" 
-                          className="w-8 h-8 rounded-full border border-gray-200" 
+                          className="w-8 h-8 rounded-full border border-gray-200"
+                          width={32}
+                          height={32}
                         />
                       ) : (
                         <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold border bg-indigo-100 text-indigo-700 border-indigo-200`}>
@@ -160,10 +165,12 @@ const LandingNavbar: React.FC = () => {
                 onClick={toggleLanguage}
                 className="flex items-center space-x-2 px-3 py-1.5 rounded-full border border-slate-200 bg-white shadow-sm"
               >
-              <img 
+              <Image 
                 src={language === 'en' ? "https://flagcdn.com/w40/us.png" : "https://flagcdn.com/w40/bd.png"} 
                 alt={language === 'en' ? "USA Flag" : "Bangladesh Flag"} 
                 className="w-5 h-3.5 object-cover rounded"
+                width={20}
+                height={14}
               />
               <span className="text-xs font-bold text-slate-700 uppercase">{language}</span>
             </button>

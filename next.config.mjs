@@ -9,6 +9,22 @@ const nextConfig = {
         hostname: 'res.cloudinary.com',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'flagcdn.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'illustrations.popsy.co',
+      },
+      {
+        protocol: 'https',
+        hostname: 'api.dicebear.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+      },
       // Add your backend domain pattern here if needed
       ...(() => {
         const rawBackendUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.BASE_URL;

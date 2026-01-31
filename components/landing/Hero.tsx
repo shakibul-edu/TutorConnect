@@ -5,6 +5,7 @@ import { Search } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { Link } from '../../lib/router';
 import Logo from '../Logo';
+import Image from 'next/image';
 
 const Hero: React.FC = () => {
   const { t } = useLanguage();
@@ -59,7 +60,7 @@ const Hero: React.FC = () => {
             <div className="pt-8 flex items-center space-x-4 text-sm text-slate-500 font-bold">
               <div className="flex -space-x-4">
                  {[10, 11, 12, 13].map(i => (
-                   <img key={i} className="w-10 h-10 rounded-full border-4 border-white shadow-md bg-white" src={`https://api.dicebear.com/9.x/notionists/svg?seed=${i}`} alt="User" />
+                   <Image key={i} className="rounded-full border-4 border-white shadow-md bg-white object-cover" src={`https://api.dicebear.com/9.x/notionists/svg?seed=${i}`} alt="User" width={40} height={40} />
                  ))}
               </div>
               <p className="font-school text-lg text-brand-600">{t.hero.social}</p>
@@ -75,10 +76,13 @@ const Hero: React.FC = () => {
               
               <div className="absolute inset-0 bg-brand-100 rounded-[3rem] -rotate-3 transform transition-transform group-hover:-rotate-1 border-4 border-white opacity-50 z-0"></div>
               
-              <img 
+              <Image 
                 src="https://illustrations.popsy.co/amber/studying.svg" 
                 alt="Student Studying with Books" 
                 className="relative z-10 w-full h-full object-contain drop-shadow-2xl transform transition-transform hover:-translate-y-4 duration-500"
+                width={500}
+                height={500}
+                priority
               />
 
 
