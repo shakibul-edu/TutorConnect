@@ -11,6 +11,13 @@ interface LocationPosition {
 const useLocation = (session: any) => {
     const [location, setLocationState] = useState<LocationPosition | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [pendingUpdate, setPendingUpdate] = useState<{
+        distance: number;
+        locationString: string;
+        newLocation: LocationPosition;
+    } | null>(null);
+    const [permissionDenied, setPermissionDenied] = useState(false);
+
     const backendAccess = (session as any)?.backendAccess;
 
     // Helper to calculate distance in KM
@@ -57,6 +64,7 @@ const useLocation = (session: any) => {
 
         const geoId = navigator.geolocation.watchPosition(
             async (position) => {
+                setPermissionDenied(false); // Reset permission denied if we get a position
                 const { latitude, longitude, accuracy } = position.coords;
                 const newLocation = { latitude, longitude, accuracy };
                 
@@ -85,24 +93,20 @@ const useLocation = (session: any) => {
                             const resp = await setLocation(backendAccess, locationString);
 
                             if (resp?.update_required) {
-                                const shouldUpdate = window.confirm(
-                                    `New location is ${resp.distance_km ?? '0'} km away. Update on server?`
-                                );
-                                if (shouldUpdate) {
-                                    await setLocation(backendAccess, locationString, { update: 'true' });
-                                    localStorage.setItem('user_location', JSON.stringify(newLocation));
-                                } else {
-                                    // User declined; still update baseline locally to avoid repeated prompts
-                                    localStorage.setItem('user_location', JSON.stringify(newLocation));
-                                }
+                                // Instead of window.confirm, set pending update state
+                                setPendingUpdate({
+                                    distance: resp.distance_km ?? 0,
+                                    locationString,
+                                    newLocation
+                                });
                             } else {
                                 // No update_required flag; consider it handled
                                 localStorage.setItem('user_location', JSON.stringify(newLocation));
                             }
                         }
                     } catch (e) {
-                        // If JSON parse fails, just reset baseline
-                        localStorage.setItem('user_location', JSON.stringify(newLocation));
+                         // If JSON parse fails, just reset baseline
+                         localStorage.setItem('user_location', JSON.stringify(newLocation));
                     }
                 } else {
                     // No previous location stored, set current as baseline
@@ -111,6 +115,9 @@ const useLocation = (session: any) => {
             },
             (geoError) => {
                 setError(geoError.message);
+                if (geoError.code === 1) { // PERMISSION_DENIED
+                    setPermissionDenied(true);
+                }
             },
             {
                 enableHighAccuracy: true,
@@ -122,7 +129,32 @@ const useLocation = (session: any) => {
         return () => navigator.geolocation.clearWatch(geoId);
     }, [backendAccess]);
 
-    return { location, error };
+    const confirmUpdate = async () => {
+        if (!pendingUpdate || !backendAccess) return;
+        try {
+            await setLocation(backendAccess, pendingUpdate.locationString, { update: 'true' });
+            localStorage.setItem('user_location', JSON.stringify(pendingUpdate.newLocation));
+            setPendingUpdate(null);
+        } catch (e) {
+            console.error("Failed to confirm location update", e);
+        }
+    };
+
+    const cancelUpdate = () => {
+        if (!pendingUpdate) return;
+        // User declined; still update baseline locally to avoid repeated prompts for the same location
+        localStorage.setItem('user_location', JSON.stringify(pendingUpdate.newLocation));
+        setPendingUpdate(null);
+    };
+
+    return { 
+        location, 
+        error, 
+        pendingUpdate, 
+        permissionDenied,
+        confirmUpdate,
+        cancelUpdate
+    };
 };
 
 export default useLocation;

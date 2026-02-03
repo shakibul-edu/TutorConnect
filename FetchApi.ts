@@ -129,9 +129,15 @@ export class FetchApi {
         const fetchUrl = this.buildUrl(url, params);
 
         // Auto-attach token from localStorage if available
-        let accessToken = '';
-        if (typeof window !== 'undefined') {
         const finalHeaders: Record<string, string> = { ...headers };
+
+        // Auto-attach token from localStorage if available
+        if (typeof window !== 'undefined') {
+            const accessToken = localStorage.getItem('accessToken');
+            if (accessToken) {
+                finalHeaders['Authorization'] = `Bearer ${accessToken}`;
+            }
+        }
 
         const fetchOptions: RequestInit = {
             method,
@@ -218,12 +224,12 @@ export class FetchApi {
                         throw error;
                     }
                 } else {
-                     // No refresh token, trigger callback and stop further processing
-                     console.log('Received 401 Unauthorized - no refresh token available');
-                     if (onUnauthorizedCallback) {
-                         onUnauthorizedCallback();
-                     }
-                     throw new Error('Unauthorized');
+                    // No refresh token, trigger callback and stop further processing
+                    console.log('Received 401 Unauthorized - no refresh token available');
+                    if (onUnauthorizedCallback) {
+                        onUnauthorizedCallback();
+                    }
+                    throw new Error('Unauthorized');
                 }
             } else {
                 // Wait for the token to be refreshed
@@ -239,7 +245,7 @@ export class FetchApi {
                                 resolve(null as T);
                                 return;
                             }
-                             if (!res.ok) {
+                            if (!res.ok) {
                                 let errorMessage: string;
                                 try {
                                     const errorData = await res.json();

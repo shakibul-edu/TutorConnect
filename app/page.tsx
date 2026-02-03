@@ -1,25 +1,19 @@
-'use client';
 
-import React from 'react';
 import Hero from '../components/landing/Hero';
 import Features from '../components/landing/Features';
 import HowItWorks from '../components/landing/HowItWorks';
 import Testimonials from '../components/landing/Testimonials';
 import CTA from '../components/landing/CTA';
-import { useLanguage } from '../contexts/LanguageContext';
+import LanguageWrapper from '../contexts/LanguageWrapper';
 
-const HomePage: React.FC = () => {
-  const { language } = useLanguage();
-
+export default function HomePage() {
   return (
-    <div className={`min-h-screen bg-white ${language === 'bn' ? 'lang-bn' : ''}`}>
+    <LanguageWrapper>
       <Hero />
       <Features />
       <HowItWorks />
       <Testimonials />
       <CTA />
-    </div>
+    </LanguageWrapper>
   );
-};
-
-export default HomePage;
+}

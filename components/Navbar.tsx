@@ -17,6 +17,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import useLocation from '../LocationHook';
 import Logo from './Logo';
 import Image from 'next/image';
+import LocationBanner from './LocationBanner';
 
 const Navbar: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -25,7 +26,7 @@ const Navbar: React.FC = () => {
   
   const { user, logout, openAuthModal, toggleUserMode } = useAuth();
   const { data: session } = useSession();
-  useLocation(session);
+  const { pendingUpdate, permissionDenied, confirmUpdate, cancelUpdate } = useLocation(session);
   const { push } = useRouter();
   const pathname = usePathname();
 
@@ -64,17 +65,49 @@ const Navbar: React.FC = () => {
   const displayImage = session?.user?.image || user?.image || '';
 
   // Determine navbar classes based on route and scroll state
+  // Removed padding from here, moving it to inner container
   const navbarClasses = isHomePage
-    ? `fixed w-full z-50 transition-all duration-300 ${isScrolled ? 'bg-white/90 backdrop-blur-md shadow-sm py-4' : 'bg-transparent py-6'}`
-    : 'sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm py-4'; // Standard persistent navbar for other pages
+    ? `fixed w-full z-50 transition-all duration-300 ${isScrolled ? 'bg-white/90 backdrop-blur-md shadow-sm' : 'bg-transparent'}`
+    : 'sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm'; 
+
+  // Dynamic padding for the inner container
+  const paddingClass = isHomePage
+    ? (isScrolled ? 'py-4' : 'py-6')
+    : 'py-4';
 
   // Adjust text colors based on background
   const textColorClass = (isHomePage && !isScrolled) ? 'text-slate-600 hover:text-brand-600' : 'text-slate-600 hover:text-brand-600';
   const logoTextClass = (isHomePage && !isScrolled) ? 'text-slate-900' : 'text-slate-900';
 
   return (
-    <nav className={navbarClasses}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <nav className={`${navbarClasses} flex flex-col`}>
+      {(pendingUpdate || permissionDenied) && (
+        <div className="w-full z-[60]">
+             {pendingUpdate && (
+                <LocationBanner 
+                    type="update"
+                    message={`New location detected (${pendingUpdate.distance.toFixed(2)} km away). Update your location?`}
+                    onConfirm={confirmUpdate}
+                    onDismiss={cancelUpdate}
+                />
+             )}
+             {permissionDenied && (
+                <LocationBanner 
+                    type="permission"
+                    message="Location access is denied. Please enable location services for better experience."
+                    onConfirm={() => {
+                        // Attempt to request permission again by reloading or guiding user
+                        // Navigator.permissions API is read-only mostly, so we can just alert or guide
+                        alert("Please enable location access in your browser settings.");
+                    }}
+                    onDismiss={() => {
+                         // Optional: Allow dismissing permission warning for this session
+                    }}
+                />
+             )}
+        </div>
+      )}
+      <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full transition-all duration-300 ${paddingClass}`}>
         <div className="flex justify-between items-center">
           {/* Logo */}
           <Link href="home" className="flex items-center space-x-2 cursor-pointer no-underline">
