@@ -135,7 +135,10 @@ export class FetchApi {
         }
 
         const finalHeaders: Record<string, string> = { ...headers };
-        if (accessToken && !finalHeaders['Authorization']) {
+        const hasAuthorizationHeader = Object.keys(finalHeaders).some(
+            (key) => key.toLowerCase() === 'authorization'
+        );
+        if (accessToken && !hasAuthorizationHeader) {
             finalHeaders['Authorization'] = `Bearer ${accessToken}`;
         }
 
@@ -164,9 +167,10 @@ export class FetchApi {
 
                 if (refreshToken) {
                     try {
-                        // Use NEXT_PUBLIC_API_URL if available, otherwise fall back to base URL logic
-                        const refreshBaseUrl = process.env.NEXT_PUBLIC_API_URL || this.baseUrl;
-                        const refreshUrl = refreshBaseUrl.endsWith('/') ? `${refreshBaseUrl}api/token/refresh/` : `${refreshBaseUrl}/api/token/refresh/`;
+                        // Use the same base URL as the main request to keep behavior consistent
+                        const refreshBaseUrl = this.baseUrl;
+                        const normalizedRefreshBaseUrl = refreshBaseUrl.replace(/\/+$/, '');
+                        const refreshUrl = `${normalizedRefreshBaseUrl}/api/token/refresh/`;
 
                         const refreshResponse = await fetch(
                             refreshUrl,
@@ -179,15 +183,26 @@ export class FetchApi {
 
                         if (refreshResponse.ok) {
                             const data = await refreshResponse.json();
+                            if (!data || typeof data !== 'object' || typeof (data as any).access !== 'string' || !(data as any).access) {
+                                // Invalid refresh response structure, treat as refresh failure
+                                isRefreshing = false;
+                                if (typeof window !== 'undefined') {
+                                    localStorage.removeItem('accessToken');
+                                    localStorage.removeItem('refreshToken');
+                                    window.location.href = '/login';
+                                }
+                                throw new Error('Invalid refresh token response');
+                            }
+                            const newAccessToken = (data as any).access as string;
                             if (typeof window !== 'undefined') {
-                                localStorage.setItem('accessToken', data.access);
+                                localStorage.setItem('accessToken', newAccessToken);
                             }
                             isRefreshing = false;
-                            onRefreshed(data.access);
+                            onRefreshed(newAccessToken);
 
                             // Retry original request
                             const retryHeaders = { ...fetchOptions.headers } as Record<string, string>;
-                            retryHeaders['Authorization'] = `Bearer ${data.access}`;
+                            retryHeaders['Authorization'] = `Bearer ${newAccessToken}`;
 
                             response = await fetch(fetchUrl, { ...fetchOptions, headers: retryHeaders });
                         } else {
@@ -200,20 +215,24 @@ export class FetchApi {
                             throw new Error('Session expired');
                         }
                     } catch (error) {
-                        isRefreshing = false;
-                        if (typeof window !== 'undefined') {
-                            localStorage.removeItem('accessToken');
-                            localStorage.removeItem('refreshToken');
-                            window.location.href = '/login';
+                        try {
+                            if (typeof window !== 'undefined') {
+                                localStorage.removeItem('accessToken');
+                                localStorage.removeItem('refreshToken');
+                                window.location.href = '/login';
+                            }
+                        } finally {
+                            isRefreshing = false;
                         }
                         throw error;
                     }
                 } else {
-                     // No refresh token, trigger callback or just let it fail
+                     // No refresh token, trigger callback and stop further processing
                      console.log('Received 401 Unauthorized - no refresh token available');
                      if (onUnauthorizedCallback) {
                          onUnauthorizedCallback();
                      }
+                     throw new Error('Unauthorized');
                 }
             } else {
                 // Wait for the token to be refreshed
@@ -230,7 +249,7 @@ export class FetchApi {
                                 return;
                             }
                              if (!res.ok) {
-                                let errorMessage = 'Server error';
+                                let errorMessage: string;
                                 try {
                                     const errorData = await res.json();
                                     errorMessage = this.parseErrorResponse(errorData, res.statusText);
