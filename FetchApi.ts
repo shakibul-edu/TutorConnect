@@ -131,16 +131,7 @@ export class FetchApi {
         // Auto-attach token from localStorage if available
         let accessToken = '';
         if (typeof window !== 'undefined') {
-            accessToken = localStorage.getItem('accessToken') || '';
-        }
-
         const finalHeaders: Record<string, string> = { ...headers };
-        const hasAuthorizationHeader = Object.keys(finalHeaders).some(
-            (key) => key.toLowerCase() === 'authorization'
-        );
-        if (accessToken && !hasAuthorizationHeader) {
-            finalHeaders['Authorization'] = `Bearer ${accessToken}`;
-        }
 
         const fetchOptions: RequestInit = {
             method,
