@@ -1,5 +1,3 @@
-import { error } from "console";
-
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 
 // Callback to trigger re-authentication when token is invalid
@@ -7,6 +5,33 @@ let onUnauthorizedCallback: (() => void) | null = null;
 
 export const setUnauthorizedCallback = (callback: () => void) => {
     onUnauthorizedCallback = callback;
+};
+
+// Token refresh logic variables
+let isRefreshing = false;
+let refreshSubscribers: ((token: string) => void)[] = [];
+let refreshTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
+const onRefreshed = (token: string) => {
+    refreshSubscribers.forEach(callback => callback(token));
+    refreshSubscribers = [];
+
+    if (refreshTimeoutId !== null) {
+        clearTimeout(refreshTimeoutId);
+        refreshTimeoutId = null;
+    }
+};
+
+const addRefreshSubscriber = (callback: (token: string) => void) => {
+    refreshSubscribers.push(callback);
+
+    // Ensure we don't keep subscribers around indefinitely if refresh never completes.
+    if (refreshTimeoutId === null) {
+        refreshTimeoutId = setTimeout(() => {
+            refreshSubscribers = [];
+            refreshTimeoutId = null;
+        }, 60_000); // Clear subscribers after 60 seconds as a safety net
+    }
 };
 
 export interface FetchApiOptions {
@@ -103,12 +128,16 @@ export class FetchApi {
         const url = this.buildEndpointUrl(endpoint);
         const fetchUrl = this.buildUrl(url, params);
 
+        // Auto-attach token from localStorage if available
+        let accessToken = '';
+        if (typeof window !== 'undefined') {
+        const finalHeaders: Record<string, string> = { ...headers };
 
         const fetchOptions: RequestInit = {
             method,
-            headers: isFormData ? { ...headers } : {
+            headers: isFormData ? { ...finalHeaders } : {
                 'Content-Type': 'application/json',
-                ...headers,
+                ...finalHeaders,
             },
         };
 
@@ -119,21 +148,121 @@ export class FetchApi {
             console.error('Invalid URL constructed:', fetchUrl);
         }
 
-        const response = await fetch(fetchUrl, fetchOptions);
+        let response = await fetch(fetchUrl, fetchOptions);
 
         // Handle 401 Unauthorized - token is invalid/expired
         if (response.status === 401) {
-            console.log('Received 401 Unauthorized - triggering re-authentication');
-            if (onUnauthorizedCallback) {
-                onUnauthorizedCallback();
+            if (!isRefreshing) {
+                isRefreshing = true;
+                const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
+
+                if (refreshToken) {
+                    try {
+                        // Use the same base URL as the main request to keep behavior consistent
+                        const refreshBaseUrl = this.baseUrl;
+                        const normalizedRefreshBaseUrl = refreshBaseUrl.replace(/\/+$/, '');
+                        const refreshUrl = `${normalizedRefreshBaseUrl}/api/token/refresh/`;
+
+                        const refreshResponse = await fetch(
+                            refreshUrl,
+                            {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ refresh: refreshToken }),
+                            }
+                        );
+
+                        if (refreshResponse.ok) {
+                            const data = await refreshResponse.json();
+                            if (!data || typeof data !== 'object' || typeof (data as any).access !== 'string' || !(data as any).access) {
+                                // Invalid refresh response structure, treat as refresh failure
+                                isRefreshing = false;
+                                if (typeof window !== 'undefined') {
+                                    localStorage.removeItem('accessToken');
+                                    localStorage.removeItem('refreshToken');
+                                    window.location.href = '/login';
+                                }
+                                throw new Error('Invalid refresh token response');
+                            }
+                            const newAccessToken = (data as any).access as string;
+                            if (typeof window !== 'undefined') {
+                                localStorage.setItem('accessToken', newAccessToken);
+                            }
+                            isRefreshing = false;
+                            onRefreshed(newAccessToken);
+
+                            // Retry original request
+                            const retryHeaders = { ...fetchOptions.headers } as Record<string, string>;
+                            retryHeaders['Authorization'] = `Bearer ${newAccessToken}`;
+
+                            response = await fetch(fetchUrl, { ...fetchOptions, headers: retryHeaders });
+                        } else {
+                            // Refresh failed, logout
+                            if (typeof window !== 'undefined') {
+                                localStorage.removeItem('accessToken');
+                                localStorage.removeItem('refreshToken');
+                                window.location.href = '/login';
+                            }
+                            throw new Error('Session expired');
+                        }
+                    } catch (error) {
+                        try {
+                            if (typeof window !== 'undefined') {
+                                localStorage.removeItem('accessToken');
+                                localStorage.removeItem('refreshToken');
+                                window.location.href = '/login';
+                            }
+                        } finally {
+                            isRefreshing = false;
+                        }
+                        throw error;
+                    }
+                } else {
+                     // No refresh token, trigger callback and stop further processing
+                     console.log('Received 401 Unauthorized - no refresh token available');
+                     if (onUnauthorizedCallback) {
+                         onUnauthorizedCallback();
+                     }
+                     throw new Error('Unauthorized');
+                }
+            } else {
+                // Wait for the token to be refreshed
+                return new Promise((resolve, reject) => {
+                    addRefreshSubscriber(async (token) => {
+                        const retryHeaders = { ...fetchOptions.headers } as Record<string, string>;
+                        retryHeaders['Authorization'] = `Bearer ${token}`;
+                        try {
+                            const res = await fetch(fetchUrl, { ...fetchOptions, headers: retryHeaders });
+
+                            // Process the retried response
+                            if (res.status === 204) {
+                                resolve(null as T);
+                                return;
+                            }
+                             if (!res.ok) {
+                                let errorMessage: string;
+                                try {
+                                    const errorData = await res.json();
+                                    errorMessage = this.parseErrorResponse(errorData, res.statusText);
+                                } catch (e) {
+                                    errorMessage = res.statusText || `HTTP Error ${res.status}`;
+                                }
+                                reject(new Error(errorMessage));
+                                return;
+                            }
+                            const data = await res.json();
+                            resolve(data);
+                        } catch (err) {
+                            reject(err);
+                        }
+                    });
+                });
             }
         }
 
         if (response.status === 204) {
             return null as T;
         }
-        // const responseText = await response.text();
-        // console.log('FetchApi Response:', { status: response.status, body: responseText });
 
         if (!response.ok) {
             let errorMessage = 'Server error';
@@ -172,5 +301,3 @@ export class FetchApi {
         return this.request<T>(endpoint, { method: 'PATCH', body, headers });
     }
 }
-
-
