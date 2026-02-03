@@ -10,14 +10,28 @@ export const setUnauthorizedCallback = (callback: () => void) => {
 // Token refresh logic variables
 let isRefreshing = false;
 let refreshSubscribers: ((token: string) => void)[] = [];
+let refreshTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
 const onRefreshed = (token: string) => {
     refreshSubscribers.forEach(callback => callback(token));
     refreshSubscribers = [];
+
+    if (refreshTimeoutId !== null) {
+        clearTimeout(refreshTimeoutId);
+        refreshTimeoutId = null;
+    }
 };
 
 const addRefreshSubscriber = (callback: (token: string) => void) => {
     refreshSubscribers.push(callback);
+
+    // Ensure we don't keep subscribers around indefinitely if refresh never completes.
+    if (refreshTimeoutId === null) {
+        refreshTimeoutId = setTimeout(() => {
+            refreshSubscribers = [];
+            refreshTimeoutId = null;
+        }, 60_000); // Clear subscribers after 60 seconds as a safety net
+    }
 };
 
 export interface FetchApiOptions {
