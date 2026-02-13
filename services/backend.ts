@@ -27,7 +27,8 @@ export async function getMediums(token: string) {
 export async function getGradesbyMedium(token: string, body: { medium_id: string[] }) {
     if (token) {
         try {
-            const response = await FetchApi.post('/grade-by-medium/', body, { 'Authorization': `Bearer ${token}` }, {});
+            const params = { medium_id: body.medium_id };
+            const response = await FetchApi.get('/grade-by-medium/', params, { 'Authorization': `Bearer ${token}` });
             return response;
         } catch (error) {
             console.error('Error connecting to server:', error);
@@ -42,7 +43,8 @@ export async function getGradesbyMedium(token: string, body: { medium_id: string
 export async function getSubjects(token: string, body: { grade_id: string[] }) {
     if (token) {
         try {
-            const response = await FetchApi.post('/subject-by-grade/', body, { 'Authorization': `Bearer ${token}` }, {});
+            const params = { grade_id: body.grade_id };
+            const response = await FetchApi.get('/subject-by-grade/', params, { 'Authorization': `Bearer ${token}` });
             return response;
         } catch (error) {
             console.error('Error connecting to server:', error);
@@ -482,9 +484,188 @@ export async function getUserDashboardStats(token: string) {
         } catch (error) {
             console.error('Error fetching dashboard stats:', error);
             throw error;
+            // --- Job Post APIs ---
         }
     } else {
         console.warn('No token found, skipping server connection');
         return null;
     }
+}
+
+// --- Job Post APIs ---
+
+export async function getJobPosts(token: string, filters: any = {}) {
+    if (token) {
+        try {
+            const response = await FetchApi.get('/job-post/', filters, { 'Authorization': `Bearer ${token}` });
+            return response;
+        } catch (error) {
+            console.error('Error fetching job posts:', error);
+            throw error;
+        }
+    } else {
+        console.warn('No token found, skipping server connection');
+        return null;
+    }
+}
+
+export async function getUserJobPosts(token: string) {
+    if (token) {
+        try {
+            const response = await FetchApi.get('/job-post/', { dashboard: 'true' }, { 'Authorization': `Bearer ${token}` });
+            return response;
+        } catch (error) {
+            console.error('Error fetching user job posts:', error);
+            throw error;
+        }
+    } else {
+        console.warn('No token found, skipping server connection');
+        return null;
+    }
+}
+
+export async function getJobPost(token: string, id: string) {
+    if (token) {
+        try {
+            const response = await FetchApi.get(`/job-post/${id}/`, {}, { 'Authorization': `Bearer ${token}` });
+            return response;
+        } catch (error) {
+            console.error('Error fetching job post:', error);
+            throw error;
+        }
+    } else {
+        console.warn('No token found, skipping server connection');
+        return null;
+    }
+}
+
+export async function createJobPost(token: string, data: any) {
+    if (token) {
+        try {
+            const response = await FetchApi.post("/job-post/", data, { 'Authorization': `Bearer ${token}` }, {});
+            return response;
+        } catch (error) {
+            throw new Error((error as { message?: string } | any).message || "Error creating job post");
+        }
+    } else {
+        console.error("No token provided");
+    }
+    return null;
+}
+
+export async function updateJobPost(token: string, id: string, data: any) {
+    if (token) {
+        try {
+            const response = await FetchApi.put(`/job-post/${id}/`, data, { 'Authorization': `Bearer ${token}` }, {});
+            return response;
+        } catch (error) {
+            throw new Error((error as { message?: string } | any).message || "Error updating job post");
+        }
+    } else {
+        console.error("No token provided");
+    }
+    return null;
+}
+
+export async function closeJob(token: string, id: string, data: any) {
+    if (token) {
+        try {
+            const response = await FetchApi.patch(`/job-post/${id}/`, data, { 'Authorization': `Bearer ${token}` });
+            return response;
+        } catch (error) {
+            throw new Error((error as { message?: string } | any).message || "Error updating job post");
+        }
+    } else {
+        console.error("No token provided");
+    }
+    return null;
+}
+
+
+export async function patchJobPost(token: string, id: string, data: any) {
+    if (token) {
+        try {
+            const response = await FetchApi.patch(`/job-post/${id}/`, data, { 'Authorization': `Bearer ${token}` });
+            return response;
+        } catch (error) {
+            throw new Error((error as { message?: string } | any).message || "Error updating job post");
+        }
+    } else {
+        console.error("No token provided");
+    }
+    return null;
+}
+
+export async function submitJobPostAvailability(token: string, data: any) {
+    if (token) {
+        try {
+            const response = await FetchApi.post("/job-post-availability/", data, { 'Authorization': `Bearer ${token}` }, {});
+            return response;
+        } catch (error) {
+            throw new Error((error as { message?: string } | any).message || "Error submitting job post availability");
+        }
+    } else {
+        console.error("No token provided");
+    }
+    return null;
+}
+
+// --- Bid APIs ---
+
+export async function createJobBid(token: string, data: { job: number; proposed_salary: number; message: string }) {
+    if (token) {
+        try {
+            const response = await FetchApi.post('/bid-job/', data, { 'Authorization': `Bearer ${token}` }, {});
+            return response;
+        } catch (error) {
+            throw new Error((error as { message?: string } | any).message || 'Error creating bid');
+        }
+    } else {
+        console.error('No token provided');
+    }
+    return null;
+}
+
+export async function getJobBids(token: string, jobId: number) {
+    if (token) {
+        try {
+            const response = await FetchApi.get('/bid-job/', { job_id: jobId }, { 'Authorization': `Bearer ${token}` });
+            return response;
+        } catch (error) {
+            console.error('Error fetching job bids:', error);
+            throw error;
+        }
+    } else {
+        console.warn('No token found, skipping server connection');
+        return null;
+    }
+}
+
+export async function getUserBids(token: string) {
+    if (token) {
+        try {
+            const response = await FetchApi.get('/bid-job/', { dashboard: 'true'}, { 'Authorization': `Bearer ${token}` });
+            return response;
+        } catch (error) {
+            console.error('Error fetching user bids:', error);
+            throw error;
+        }
+    } else {
+        console.warn('No token found, skipping server connection');
+        return null;
+    }
+}
+
+export async function updateBidStatus(token: string, bidId: number, status: 'pending' | 'accepted' | 'rejected' | 'closed') {
+    if (token) {
+        try {
+            const response = await FetchApi.patch(`/bid-job/${bidId}/`, { status }, { 'Authorization': `Bearer ${token}` });
+            return response;
+        } catch (error) {
+            throw new Error((error as { message?: string } | any).message || 'Error updating bid status');
+        }
+    } else {
+        console.error('No token provided');
+    }
+    return null;
 }

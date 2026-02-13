@@ -1,17 +1,14 @@
-
-'use client';
-
+'use client'
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { useSession } from 'next-auth/react';
-import { stateManager } from '../../services/stateManager';
 import { AlertCircle, PlusCircle } from 'lucide-react';
 import PostJobModal from '../../components/PostJobModal';
 import SellerDashboard from '../../components/dashboard/SellerDashboard';
 import BuyerDashboard from '../../components/dashboard/BuyerDashboard';
 import ContactRequestList from '../../components/dashboard/ContactRequestList';
-import { getContactRequests, updateContactRequest, getAllReviews, getUserDashboardStats } from '../../services/backend';
-import { ContactRequest, TeacherReview, DashboardStats } from '../../types';
+import { getContactRequests, updateContactRequest, getAllReviews, getUserDashboardStats, getUserJobPosts, getUserBids } from '../../services/backend';
+import { ContactRequest, TeacherReview, DashboardStats, JobPost, JobBid } from '../../types';
 import { toast } from '../../lib/toast';
 
 const DashboardPage: React.FC = () => {
@@ -26,6 +23,9 @@ const DashboardPage: React.FC = () => {
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
   const [reviews, setReviews] = useState<TeacherReview[]>([]);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
+  const [myJobs, setMyJobs] = useState<JobPost[]>([]);
+  const [myBids, setMyBids] = useState<JobBid[]>([]);
+  const [dataLoading, setDataLoading] = useState(false);
 
   // @ts-ignore
   const token = (session as any)?.backendAccess;
@@ -33,10 +33,12 @@ const DashboardPage: React.FC = () => {
   const triggerRefresh = () => setRefreshKey(prev => prev + 1);
 
   useEffect(() => {
-    const fetchContactRequests = async () => {
+    const fetchDashboardData = async () => {
       if (!token || !user || !user.email) return;
       setContactLoading(true);
+      setDataLoading(true);
       try {
+        // Fetch contact requests
         const allRequests = await getContactRequests(token, {});
         const requests = Array.isArray(allRequests) ? allRequests : [];
         
@@ -58,14 +60,29 @@ const DashboardPage: React.FC = () => {
         if (stats) {
           setDashboardStats(stats);
         }
+
+        // Fetch user's job posts (for non-teachers/job posters)
+        const userJobPosts = await getUserJobPosts(token);
+        if (userJobPosts && Array.isArray(userJobPosts)) {
+          setMyJobs(userJobPosts);
+        }
+
+        // Fetch user's bids (for teachers)
+        if (user.is_teacher) {
+          const userBids = await getUserBids(token);
+          if (userBids && Array.isArray(userBids)) {
+            setMyBids(userBids);
+          }
+        }
       } catch (error) {
-        console.error('Error loading contact requests', error);
+        console.error('Error loading dashboard data', error);
       } finally {
         setContactLoading(false);
+        setDataLoading(false);
       }
     };
 
-    fetchContactRequests();
+    fetchDashboardData();
   }, [token, user, refreshKey]);
 
   const handleContactStatusChange = async (id: number, status: 'accepted' | 'rejected') => {
@@ -98,9 +115,7 @@ const DashboardPage: React.FC = () => {
     );
   }
 
-  const myJobs = stateManager.getJobs().filter(j => j.posted_by.id === user.id);
-  const myBids = stateManager.getBidsByTutor(user.id);
-  const totalBidsReceived = myJobs.reduce((acc, job) => acc + job.bids_count, 0);
+  const totalBidsReceived = myJobs.reduce((acc, job) => acc + (job.bids_count || 0), 0);
 
   return (
     <div key={refreshKey} className="min-h-screen bg-gray-50/50">
@@ -126,7 +141,7 @@ const DashboardPage: React.FC = () => {
         </div>
 
         {user.is_teacher ? (
-            <SellerDashboard myBids={myBids} stats={dashboardStats} />
+            <SellerDashboard myBids={myBids} stats={dashboardStats} loading={dataLoading} token={token} onRefresh={triggerRefresh} />
         ) : (
             <BuyerDashboard 
                 myJobs={myJobs} 
@@ -134,6 +149,8 @@ const DashboardPage: React.FC = () => {
                 onRefresh={triggerRefresh} 
                 user={user}
                 stats={dashboardStats}
+                loading={dataLoading}
+                token={token}
             />
         )}
 

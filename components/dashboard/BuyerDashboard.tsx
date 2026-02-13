@@ -1,10 +1,9 @@
 
-import React, { useState } from 'react';
-import { JobPost, Bid, Review, DashboardStats } from '../../types';
-import { stateManager } from '../../services/stateManager';
+import React, { useState, useEffect } from 'react';
+import { JobPost, JobBid, DashboardStats } from '../../types';
 import StatCard from './StatCard';
-import { Briefcase, Users, CheckCircle, Star, Eye, Send } from 'lucide-react';
-import ReviewModal from '../ReviewModal';
+import { Briefcase, Users, CheckCircle, Send } from 'lucide-react';
+import { getJobBids } from '../../services/backend';
 
 interface BuyerDashboardProps {
   myJobs: JobPost[];
@@ -12,43 +11,35 @@ interface BuyerDashboardProps {
   onRefresh: () => void;
   user: any;
   stats?: DashboardStats | null;
+  loading?: boolean;
+  token: string;
 }
 
-const BuyerDashboard: React.FC<BuyerDashboardProps> = ({ myJobs, totalBidsReceived, onRefresh, user, stats }) => {
+const BuyerDashboard: React.FC<BuyerDashboardProps> = ({ myJobs, totalBidsReceived, onRefresh, user, stats, loading, token }) => {
   const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
-  const [selectedBidForReview, setSelectedBidForReview] = useState<Bid | null>(null);
-  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
-  const [viewingReview, setViewingReview] = useState<Review | undefined>(undefined);
+  const [applicants, setApplicants] = useState<JobBid[]>([]);
+  const [bidsLoading, setBidsLoading] = useState(false);
 
   const selectedJob = myJobs.find(j => j.id === selectedJobId);
-  const applicants = selectedJobId ? stateManager.getBidsForJob(selectedJobId) : [];
 
-  const handleAcceptBid = (bidId: number) => {
-    if (confirm('Are you sure you want to hire this tutor? This will close the job to other applicants.')) {
-      stateManager.updateBidStatus(bidId, 'accepted');
-      onRefresh();
-    }
-  };
+  useEffect(() => {
+    const fetchBids = async () => {
+      if (!selectedJobId || !token) return;
+      setBidsLoading(true);
+      try {
+        const bids = await getJobBids(token, selectedJobId);
+        if (bids && Array.isArray(bids)) {
+          setApplicants(bids);
+        }
+      } catch (error) {
+        console.error('Error fetching bids:', error);
+      } finally {
+        setBidsLoading(false);
+      }
+    };
 
-  const handleRejectBid = (bidId: number) => {
-    stateManager.updateBidStatus(bidId, 'rejected');
-    onRefresh();
-  };
-
-  const openReviewModal = (bid: Bid) => {
-    // Check if review exists
-    const existingReview = stateManager.getReviewForJobAndTutor(bid.job_id, bid.tutor.id);
-    
-    if (existingReview) {
-      setViewingReview(existingReview);
-      setSelectedBidForReview(bid);
-      setIsReviewModalOpen(true);
-    } else {
-      setViewingReview(undefined);
-      setSelectedBidForReview(bid);
-      setIsReviewModalOpen(true);
-    }
-  };
+    fetchBids();
+  }, [selectedJobId, token]);
 
   return (
     <div className="space-y-6">
@@ -70,7 +61,9 @@ const BuyerDashboard: React.FC<BuyerDashboardProps> = ({ myJobs, totalBidsReceiv
             <h3 className="font-bold text-gray-900">My Job Posts</h3>
           </div>
           <div className="divide-y divide-gray-100">
-            {myJobs.length > 0 ? myJobs.map(job => (
+            {loading ? (
+              <div className="p-12 text-center text-gray-400">Loading jobs...</div>
+            ) : myJobs.length > 0 ? myJobs.map(job => (
               <button 
                 key={job.id} 
                 onClick={() => setSelectedJobId(job.id)}
@@ -82,7 +75,7 @@ const BuyerDashboard: React.FC<BuyerDashboardProps> = ({ myJobs, totalBidsReceiv
                     <p className="text-xs text-gray-500 mt-1">{job.grade?.name} • <span className="capitalize">{job.status}</span></p>
                   </div>
                   <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${job.status === 'hired' ? 'bg-green-100 text-green-700' : 'bg-indigo-600 text-white'}`}>
-                    {job.bids_count} Bids
+                    {job.bids_count || 0} Bids
                   </span>
                 </div>
               </button>
@@ -101,74 +94,45 @@ const BuyerDashboard: React.FC<BuyerDashboardProps> = ({ myJobs, totalBidsReceiv
           
           <div className="p-0">
             {selectedJobId ? (
-              applicants.length > 0 ? (
+              bidsLoading ? (
+                <div className="p-24 text-center text-gray-400">Loading applicants...</div>
+              ) : applicants.length > 0 ? (
                 <div className="divide-y divide-gray-100">
                   {applicants.map(bid => {
-                    const existingReview = stateManager.getReviewForJobAndTutor(bid.job_id, bid.tutor.id);
+                    const statusColors = {
+                      pending: 'bg-yellow-100 text-yellow-800',
+                      accepted: 'bg-green-100 text-green-800',
+                      rejected: 'bg-red-50 text-red-500',
+                      closed: 'bg-gray-100 text-gray-500'
+                    };
+                    
                     return (
                       <div key={bid.id} className={`p-6 transition-colors ${bid.status === 'accepted' ? 'bg-green-50/50' : 'hover:bg-gray-50'}`}>
                         <div className="flex items-start gap-4">
                           <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold text-xl flex-shrink-0">
-                            {bid.tutor.user.first_name[0]}
+                            T
                           </div>
                           <div className="flex-1">
                             <div className="flex justify-between items-start">
                               <div>
-                                <h4 className="font-bold text-gray-900 text-lg">{bid.tutor.user.first_name} {bid.tutor.user.last_name}</h4>
-                                <p className="text-xs font-bold text-blue-600 uppercase tracking-widest">{bid.tutor.highest_qualification}</p>
+                                <h4 className="font-bold text-gray-900 text-lg">Tutor #{bid.tutor}</h4>
+                                <p className="text-xs text-gray-500 mt-1">Applied {new Date(bid.created_at).toLocaleDateString()}</p>
                               </div>
                               <div className="text-right">
                                 <div className="text-lg font-bold text-gray-900">{bid.proposed_salary} BDT</div>
+                                <span className={`px-2 py-1 rounded-full text-xs font-bold uppercase ${statusColors[bid.status]}`}>
+                                  {bid.status}
+                                </span>
                               </div>
                             </div>
                             <div className="mt-3 bg-white p-3 rounded-lg border border-gray-100 italic text-sm text-gray-600">
                               "{bid.message}"
                             </div>
-                            <div className="mt-4 flex gap-2">
-                              {bid.status === 'pending' && selectedJob?.status === 'open' && (
-                                <>
-                                  <button 
-                                    onClick={() => handleAcceptBid(bid.id)}
-                                    className="flex-1 bg-green-600 text-white py-2 rounded-md text-sm font-bold hover:bg-green-700"
-                                  >
-                                    Accept & Hire
-                                  </button>
-                                  <button 
-                                    onClick={() => handleRejectBid(bid.id)}
-                                    className="flex-1 bg-white border border-red-200 text-red-500 py-2 rounded-md text-sm font-bold hover:bg-red-50"
-                                  >
-                                    Reject
-                                  </button>
-                                </>
-                              )}
-                              {bid.status === 'accepted' && (
-                                <div className="w-full flex flex-col gap-3">
-                                  <div className="flex items-center justify-center gap-2 py-2 bg-green-100 text-green-800 rounded-md font-bold text-sm">
-                                    <CheckCircle className="w-4 h-4" />
-                                    Tutor Hired
-                                  </div>
-                                  <button 
-                                    onClick={() => openReviewModal(bid)}
-                                    className={`flex items-center justify-center gap-2 py-2 rounded-md font-bold text-sm transition-colors ${existingReview ? 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50' : 'bg-yellow-400 text-yellow-900 hover:bg-yellow-500'}`}
-                                  >
-                                    {existingReview ? (
-                                      <>
-                                        <Eye className="w-4 h-4" />
-                                        View Feedback
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Star className="w-4 h-4 fill-current" />
-                                        Leave Feedback
-                                      </>
-                                    )}
-                                  </button>
-                                </div>
-                              )}
-                              {bid.status === 'rejected' && (
-                                <span className="text-sm font-bold text-red-400 py-2">Application Rejected</span>
-                              )}
-                            </div>
+                            {bid.teacher_phone && (
+                              <div className="mt-2 text-sm text-gray-600">
+                                <span className="font-semibold">Contact:</span> {bid.teacher_phone}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -188,27 +152,6 @@ const BuyerDashboard: React.FC<BuyerDashboardProps> = ({ myJobs, totalBidsReceiv
           </div>
         </div>
       </div>
-
-      {isReviewModalOpen && selectedBidForReview && (
-        <ReviewModal
-          isOpen={isReviewModalOpen}
-          onClose={() => {
-            setIsReviewModalOpen(false);
-            setSelectedBidForReview(null);
-            setViewingReview(undefined);
-          }}
-          jobId={selectedBidForReview.job_id}
-          tutorId={selectedBidForReview.tutor.id}
-          reviewerId={user.id}
-          tutorName={`${selectedBidForReview.tutor.user.first_name} ${selectedBidForReview.tutor.user.last_name}`}
-          review={viewingReview}
-          readOnly={!!viewingReview}
-          onSuccess={() => {
-            alert('Thank you for your feedback!');
-            onRefresh();
-          }}
-        />
-      )}
     </div>
   );
 };

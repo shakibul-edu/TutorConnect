@@ -1,33 +1,49 @@
 'use client';
 import React, { useState } from 'react';
 import { X, Send } from 'lucide-react';
-import { JobPost, TeacherProfile } from '../types';
-import { stateManager } from '../services/stateManager';
+import { useSession } from 'next-auth/react';
+import { JobPost } from '../types';
+import { createJobBid } from '../services/backend';
+import { toast } from '../lib/toast';
 
 interface BidModalProps {
   isOpen: boolean;
   onClose: () => void;
   job: JobPost;
-  tutor: TeacherProfile;
   onSuccess: () => void;
 }
 
-const BidModal: React.FC<BidModalProps> = ({ isOpen, onClose, job, tutor, onSuccess }) => {
-  const [salary, setSalary] = useState(job.min_salary);
+const BidModal: React.FC<BidModalProps> = ({ isOpen, onClose, job, onSuccess }) => {
+  const { data: session } = useSession();
+  const [salary, setSalary] = useState(job.budget_salary);
   const [message, setMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    stateManager.addBid({
-      job_id: job.id,
-      tutor,
-      proposed_salary: salary,
-      message
-    });
-    onSuccess();
-    onClose();
+    const token = (session as any)?.backendAccess || localStorage.getItem('auth_token') || '';
+    if (!token) {
+      toast.error('You must be logged in to submit a bid.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await createJobBid(token, {
+        job: job.id,
+        proposed_salary: salary,
+        message
+      });
+      onSuccess();
+      onClose();
+    } catch (error) {
+      console.error('Failed to submit bid', error);
+      toast.error('Failed to submit bid.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -43,7 +59,7 @@ const BidModal: React.FC<BidModalProps> = ({ isOpen, onClose, job, tutor, onSucc
         <div className="p-6 bg-indigo-50 border-b border-indigo-100">
           <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-1">Applying for</p>
           <h3 className="font-bold text-indigo-900">{job.title}</h3>
-          <p className="text-sm text-indigo-700 mt-1">Offered Range: {job.min_salary} - {job.max_salary} BDT</p>
+          <p className="text-sm text-indigo-700 mt-1">Budget: {job.budget_salary} BDT</p>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
@@ -72,9 +88,13 @@ const BidModal: React.FC<BidModalProps> = ({ isOpen, onClose, job, tutor, onSucc
 
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} className="px-6 py-2 border rounded-md hover:bg-gray-50">Cancel</button>
-            <button type="submit" className="px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center gap-2">
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center gap-2 disabled:opacity-60"
+            >
               <Send className="w-4 h-4" />
-              Submit Application
+              {isSubmitting ? 'Submitting...' : 'Submit Application'}
             </button>
           </div>
         </form>

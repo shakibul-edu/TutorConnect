@@ -52,6 +52,9 @@ declare module "next-auth" {
     idToken?: string;
     backendAccess?: string;
     backendRefresh?: string;
+    user_id?: number;
+    is_teacher?: boolean;
+    banned?: boolean;
   }
 }
 
@@ -60,6 +63,9 @@ declare module "next-auth/jwt" {
     idToken?: string;
     backendAccess?: string;
     backendRefresh?: string;
+    user_id?: number;
+    is_teacher?: boolean;
+    banned?: boolean;
   }
 }
 
@@ -68,8 +74,11 @@ declare module "next-auth" {
     idToken?: string;
     backendAccess?: string;
     backendRefresh?: string;
+    user_id?: number;
+    is_teacher?: boolean;
+    banned?: boolean;
   }
-}
+} 
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -127,7 +136,14 @@ export const authOptions: NextAuthOptions = {
 
             if (backendRes.ok) {
               const backendData = await backendRes.json();
-              console.log('✅ Backend tokens retrieved');
+              console.log('✅ Backend tokens retrieved from /auth/google/', backendData);
+              
+              // Check if user is banned
+              if (backendData.banned) {
+                console.error('❌ User is banned, rejecting login');
+                return null;
+              }
+              
               return {
                 id: payload.sub,
                 email: payload.email,
@@ -136,6 +152,9 @@ export const authOptions: NextAuthOptions = {
                 idToken: token,
                 backendAccess: backendData.access,
                 backendRefresh: backendData.refresh,
+                user_id: backendData.user.id,
+                is_teacher: backendData.user.is_teacher,
+                banned: backendData.user.banned,
               };
             } else {
               console.error('⚠️ Backend token exchange failed, proceeding without backend tokens');
@@ -171,6 +190,15 @@ export const authOptions: NextAuthOptions = {
         token.idToken = user.idToken;
         token.backendAccess = user.backendAccess;
         token.backendRefresh = user.backendRefresh;
+        token.user_id = user.user_id;
+        token.is_teacher = user.is_teacher;
+        token.banned = user.banned;
+        
+        // Check if user is banned
+        if (user.banned) {
+          console.error('❌ User is banned, rejecting login');
+          throw new Error('This account is banned.');
+        }
       }
 
       // For Google OAuth flow (not One Tap)
@@ -179,7 +207,8 @@ export const authOptions: NextAuthOptions = {
         
         // Exchange Google ID token for backend JWT
         try {
-          const backendRes = await fetch(`${backendUrl}/api/token/`, {
+          console.log(`🔄 Calling /auth/google/ endpoint: ${backendUrl}/auth/google/`);
+          const backendRes = await fetch(`${backendUrl}/auth/google/`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${account.id_token}`,
@@ -189,11 +218,26 @@ export const authOptions: NextAuthOptions = {
 
           if (backendRes.ok) {
             const backendData = await backendRes.json();
-            console.log('✅ Backend tokens retrieved via OAuth flow');
+            console.log('✅ Backend tokens retrieved via OAuth /auth/google/', backendData);
             token.backendAccess = backendData.access;
             token.backendRefresh = backendData.refresh;
+            token.user_id = backendData.user_id;
+            token.is_teacher = backendData.is_teacher;
+            token.banned = backendData.banned;
+            
+            // Verify we got the custom fields
+            if (!backendData.user_id) {
+              console.error('⚠️ Backend did not return user_id! Check /auth/google/ endpoint');
+            }
+            
+            // Check if user is banned
+            if (backendData.banned) {
+              console.error('❌ User is banned, rejecting login');
+              throw new Error('This account is banned.');
+            }
           } else {
-            console.error('⚠️ Backend token exchange failed with status', backendRes.status);
+            const errorText = await backendRes.text();
+            console.error('⚠️ Backend token exchange failed with status', backendRes.status, errorText);
           }
         } catch (error) {
           console.error('⚠️ Backend token exchange failed:', error);
@@ -207,6 +251,18 @@ export const authOptions: NextAuthOptions = {
         if (refreshed?.access) {
           token.backendAccess = refreshed.access;
           token.backendRefresh = refreshed.refresh || token.backendRefresh;
+          token.is_teacher = refreshed.is_teacher ?? token.is_teacher;
+          token.banned = refreshed.banned ?? token.banned;
+          
+          // Check if user became banned during refresh
+          if (refreshed.banned) {
+            console.error('❌ User is banned, forcing re-login');
+            return null;
+          }
+        } else {
+          // Force re-login if backend token refresh fails
+          console.error('❌ Failed to refresh backend tokens, forcing re-login');
+          return null;
         }
       }
 
@@ -217,6 +273,9 @@ export const authOptions: NextAuthOptions = {
       session.idToken = token.idToken;
       session.backendAccess = token.backendAccess;
       session.backendRefresh = token.backendRefresh;
+      session.user_id = token.user_id;
+      session.is_teacher = token.is_teacher;
+      session.banned = token.banned;
       return session;
     },
   },
@@ -225,7 +284,12 @@ export const authOptions: NextAuthOptions = {
     signIn: '/',
   },
 
-  secret: process.env.NEXTAUTH_SECRET,
+  // CRITICAL: Must have a secret or NextAuth breaks completely
+  // If NEXTAUTH_SECRET is missing, /api/auth/session returns HTML instead of JSON
+  secret: process.env.NEXTAUTH_SECRET || 'fallback-secret-for-development-only-change-in-production',
+  
+  // Add debug flag to see more detailed errors
+  debug: process.env.NODE_ENV === 'development',
 };
 
 const handler = NextAuth(authOptions);

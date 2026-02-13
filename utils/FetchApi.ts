@@ -8,7 +8,7 @@ export interface FetchApiOptions {
     method?: HttpMethod;
     headers?: Record<string, string>;
     body?: any;
-    params?: Record<string, string | number>;
+    params?: Record<string, string | number | Array<string | number>>;
     isFormData?: boolean;
     skipAuth?: boolean;
 }
@@ -27,9 +27,23 @@ export class FetchApi {
         return `${this.baseUrl}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
     }
 
-    private static buildUrl(url: string, params?: Record<string, string | number>): string {
+    private static buildUrl(url: string, params?: Record<string, string | number | Array<string | number>>): string {
         if (!params) return url;
-        const query = new URLSearchParams(params as Record<string, string>).toString();
+        const searchParams = new URLSearchParams();
+
+        Object.entries(params).forEach(([key, value]) => {
+            if (Array.isArray(value)) {
+                value.forEach((item) => {
+                    if (item !== undefined && item !== null) {
+                        searchParams.append(key, String(item));
+                    }
+                });
+            } else if (value !== undefined && value !== null) {
+                searchParams.append(key, String(value));
+            }
+        });
+
+        const query = searchParams.toString();
         return query ? `${url}?${query}` : url;
     }
 
@@ -104,7 +118,7 @@ export class FetchApi {
 
 
 
-    static get<T = any>(endpoint: string, params?: Record<string, string | number>, headers?: Record<string, string>, body?: any) {
+    static get<T = any>(endpoint: string, params?: Record<string, string | number | Array<string | number>>, headers?: Record<string, string>, body?: any) {
         return this.request<T>(endpoint, { method: 'GET', params, headers, body });
     }
 

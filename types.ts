@@ -3,7 +3,7 @@ export type Gender = 'male' | 'female' | 'any';
 export type TeachingMode = 'online' | 'offline' | 'any';
 export type QualificationType = 'ssc' | 'hsc' | 'degree' | 'honours' | 'master' | 'phd';
 export type BidStatus = 'pending' | 'accepted' | 'rejected';
-export type JobStatus = 'open' | 'hired' | 'completed';
+export type JobStatus = 'open' | 'closed' | 'hired' | 'completed';
 
 export interface User {
   id: number;
@@ -104,19 +104,37 @@ export interface JobPost {
   id: number;
   title: string;
   description: string;
-  posted_by: User;
+  phone: string;
+  posted_by: number;
+  posted_by_name: string;
   created_at: string;
-  min_salary: number;
-  max_salary: number;
-  preferred_distance: number;
-  medium?: Medium;
-  grade?: Grade;
-  subjects: Subject[];
-  gender: Gender;
-  teaching_mode: TeachingMode;
-  highest_qualification: QualificationType;
+  updated_at: string;
+  budget_salary: number;
+  gender: string;
+  teaching_mode: string;
+  minimum_qualification: string;
+  medium: Medium;
+  grade: Grade;
+  subject_list: Subject[];
   bids_count: number;
   status: JobStatus;
+  is_biddable?: boolean;
+  editable?: boolean;
+  distance?: number;
+  availability?: AvailabilitySlot[];
+}
+
+export interface JobPostPayload {
+  title: string;
+  description: string;
+  phone: string;
+  budget_salary: number;
+  gender: string;
+  teaching_mode: string;
+  minimum_qualification: string;
+  medium: number;
+  grade: number;
+  subject_list: number[];
 }
 
 export interface Bid {
@@ -127,6 +145,17 @@ export interface Bid {
   message: string;
   created_at: string;
   status: BidStatus;
+}
+
+export interface JobBid {
+  id: number;
+  proposed_salary: number;
+  message: string;
+  created_at: string;
+  status: BidStatus;
+  job: number;
+  tutor: number;
+  teacher_phone?: string;
 }
 
 export interface Review {
@@ -226,4 +255,11 @@ export interface ContactRequest {
   teacher_phone?: string;
   teacher_email?: string;
   student_email?: string;
+}
+
+export interface JobPostAvailabilityPayload {
+  job_post: number;
+  start: string;
+  end: string;
+  days: string[];
 }

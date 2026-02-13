@@ -4,14 +4,14 @@ import React from 'react';
 import { stateManager } from '../../services/stateManager';
 import { useRouter } from '../../lib/router';
 import { MapPin, Star, GraduationCap, ArrowLeft, Mail, BookOpen, Clock, Award, ShieldCheck } from 'lucide-react';
-import { MOCK_TEACHERS } from '../../services/mockData';
+
 import { getBackendImageUrl } from '../../utils/imageHelper';
 
 export default function TutorDetailsPage({ id }: { id: string }) {
     const { push } = useRouter();
     
     // In a real app we'd fetch from stateManager correctly, here falling back to MOCK if not in state
-    const tutor = stateManager.getTeacherProfile(Number(id)) || MOCK_TEACHERS.find(t => t.id.toString() === id);
+    const tutor = stateManager.getTeacherProfile(Number(id));
 
     if (!tutor) {
         return (

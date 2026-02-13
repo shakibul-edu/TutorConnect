@@ -119,7 +119,7 @@ const Navbar: React.FC = () => {
 
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-8">
-            <Link href="/jobs" className={`${textColorClass} font-medium transition-colors cursor-pointer`}>{t.nav.tuitionJobs}</Link>
+            <Link href="/tuition-jobs" className={`${textColorClass} font-medium transition-colors cursor-pointer`}>{t.nav.tuitionJobs}</Link>
             <Link href="/tutors" className={`${textColorClass} font-medium transition-colors cursor-pointer`}>{t.nav.findTutors}</Link>
             
             <a href="/#features" className={`${textColorClass} font-medium transition-colors cursor-pointer`}>{t.nav.features}</a>
@@ -143,12 +143,18 @@ const Navbar: React.FC = () => {
 
             {displayUser ? (
                 <>
-                 {/* Mode Indicator */}
-                 <div className="flex items-center bg-gray-50 rounded-full px-3 py-1 border border-gray-200">
-                    <span className={`text-[10px] font-bold uppercase tracking-widest ${user?.is_teacher ? 'text-indigo-600' : 'text-blue-600'}`}>
-                      {user?.is_teacher ? 'Tutor Mode' : 'Finder Mode'}
-                    </span>
-                  </div>
+                 {/* Mode Indicator / Action Button */}
+                 {user?.is_teacher ? (
+                     <div className="flex items-center bg-indigo-50 rounded-full px-3 py-1 border border-indigo-100">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-600">
+                          Tutor Mode
+                        </span>
+                      </div>
+                 ) : (
+                    <Link href="/job-post/new" className="flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wide transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+                       <span>+</span> Post a Job
+                    </Link>
+                 )}
 
                   {/* Notifications */}
                   <button className="text-gray-500 hover:text-gray-700 p-2 relative">
@@ -266,7 +272,7 @@ const Navbar: React.FC = () => {
       {isMobileMenuOpen && (
         <div className="md:hidden absolute top-full left-0 w-full bg-white border-b border-slate-100 shadow-xl p-4 flex flex-col space-y-4 max-h-[80vh] overflow-y-auto">
           <Link href="home" className="text-slate-600 hover:text-brand-600 font-medium p-2 block" onClick={() => setIsMobileMenuOpen(false)}>Home</Link>
-          <Link href="/jobs" className="text-slate-600 hover:text-brand-600 font-medium p-2 block" onClick={() => setIsMobileMenuOpen(false)}>Tuition Jobs</Link>
+          <Link href="/tuition-jobs" className="text-slate-600 hover:text-brand-600 font-medium p-2 block" onClick={() => setIsMobileMenuOpen(false)}>Tuition Jobs</Link>
           <Link href="/tutors" className="text-slate-600 hover:text-brand-600 font-medium p-2 block" onClick={() => setIsMobileMenuOpen(false)}>Find Tutors</Link>
           
           <a href="/#features" className="text-slate-600 hover:text-brand-600 font-medium p-2 block" onClick={() => setIsMobileMenuOpen(false)}>{t.nav.features}</a>

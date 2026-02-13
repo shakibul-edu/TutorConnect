@@ -5,6 +5,7 @@ import { Clock } from 'lucide-react';
 interface TimeSlotSelectorProps {
   value: { start: string; end: string; days: string[] } | undefined;
   onChange: (value: { start: string; end: string; days: string[] }) => void;
+  readOnly?: boolean;
 }
 
 const DAYS_OPTIONS = [
@@ -17,12 +18,13 @@ const DAYS_OPTIONS = [
   { id: 7, name: 'Sunday', value: 'SU' },
 ];
 
-const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({ value, onChange }) => {
+const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({ value, onChange, readOnly = false }) => {
   const currentDays = value?.days || [];
   const start = value?.start || '';
   const end = value?.end || '';
 
   const toggleDay = (dayValue: string) => {
+    if (readOnly) return;
     const newDays = currentDays.includes(dayValue)
       ? currentDays.filter(d => d !== dayValue)
       : [...currentDays, dayValue];
@@ -30,6 +32,7 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({ value, onChange }) 
   };
 
   const handleTimeChange = (type: 'start' | 'end', val: string) => {
+    if (readOnly) return;
     onChange({ 
       start: type === 'start' ? val : start, 
       end: type === 'end' ? val : end, 
@@ -47,11 +50,12 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({ value, onChange }) 
               key={day.id}
               type="button"
               onClick={() => toggleDay(day.value)}
+              disabled={readOnly}
               className={`px-2 py-1 text-xs font-medium rounded-md transition-colors ${
                 currentDays.includes(day.value)
                   ? 'bg-indigo-600 text-white hover:bg-indigo-700'
                   : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-              }`}
+              } ${readOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
             >
               {day.value}
             </button>
@@ -68,6 +72,7 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({ value, onChange }) 
                     type="time"
                     value={start}
                     onChange={(e) => handleTimeChange('start', e.target.value)}
+                  disabled={readOnly}
                     className="w-full px-2 py-2 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 font-medium text-gray-700 bg-transparent"
                 />
             </div>
@@ -78,6 +83,7 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({ value, onChange }) 
                     type="time"
                     value={end}
                     onChange={(e) => handleTimeChange('end', e.target.value)}
+                  disabled={readOnly}
                     className="w-full px-2 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 font-medium text-gray-700 bg-transparent"
                 />
             </div>

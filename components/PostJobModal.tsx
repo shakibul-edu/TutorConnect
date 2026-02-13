@@ -1,9 +1,12 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, Save } from 'lucide-react';
-import { User, QualificationType, Gender, TeachingMode } from '../types';
-import { MOCK_MEDIUMS, MOCK_GRADES, MOCK_SUBJECTS } from '../services/mockData';
+import { useSession } from 'next-auth/react';
+import { User, Gender, TeachingMode, Medium, Grade, Subject } from '../types';
+import MultiSelect from './MultiSelect';
 import { stateManager } from '../services/stateManager';
+import { getMediums, getGradesbyMedium, getSubjects } from '../services/backend';
+import { toast } from '../lib/toast';
 
 interface PostJobModalProps {
   isOpen: boolean;
@@ -17,28 +20,97 @@ const PostJobModal: React.FC<PostJobModalProps> = ({ isOpen, onClose, user, onSu
   const [description, setDescription] = useState('');
   const [minSalary, setMinSalary] = useState(3000);
   const [maxSalary, setMaxSalary] = useState(8000);
-  const [mediumId, setMediumId] = useState(1);
-  const [gradeId, setGradeId] = useState(1);
+  const [mediumOptions, setMediumOptions] = useState<Medium[]>([]);
+  const [gradeOptions, setGradeOptions] = useState<Grade[]>([]);
+  const [subjectOptions, setSubjectOptions] = useState<Subject[]>([]);
+  const [selectedMedium, setSelectedMedium] = useState<number | ''>('');
+  const [selectedGrade, setSelectedGrade] = useState<number | ''>('');
+  const [selectedSubjects, setSelectedSubjects] = useState<number[]>([]);
   const [gender, setGender] = useState<Gender>('any');
   const [mode, setMode] = useState<TeachingMode>('offline');
+  // @ts-ignore
+  const { data: session } = useSession();
+  // @ts-ignore
+  const token = (session as any)?.backendAccess;
 
   if (!isOpen) return null;
 
+  useEffect(() => {
+    if (token) {
+      getMediums(token)
+        .then((data) => {
+          if (data) setMediumOptions(data);
+        })
+        .catch(err => console.error('Failed to fetch mediums', err));
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (token && selectedMedium) {
+      getGradesbyMedium(token, { medium_id: [String(selectedMedium)] })
+        .then(data => {
+          if (data) setGradeOptions(data);
+          setSelectedGrade('');
+          setSelectedSubjects([]);
+        })
+        .catch(err => console.error('Failed to fetch grades', err));
+    } else {
+      setGradeOptions([]);
+      setSelectedGrade('');
+      setSelectedSubjects([]);
+    }
+  }, [token, selectedMedium]);
+
+  useEffect(() => {
+    if (token && selectedGrade) {
+      getSubjects(token, { grade_id: [String(selectedGrade)] })
+        .then(data => {
+          if (data) setSubjectOptions(data);
+          setSelectedSubjects([]);
+        })
+        .catch(err => console.error('Failed to fetch subjects', err));
+    } else {
+      setSubjectOptions([]);
+      setSelectedSubjects([]);
+    }
+  }, [token, selectedGrade]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!token) {
+      toast.error('You must be logged in to post a job.');
+      return;
+    }
+
+    if (!selectedMedium || !selectedGrade || selectedSubjects.length === 0) {
+      toast.error('Please select medium, grade, and at least one subject.');
+      return;
+    }
+
+    const medium = mediumOptions.find(m => m.id === selectedMedium);
+    const grade = gradeOptions.find(g => g.id === selectedGrade);
+    const subject_list = subjectOptions.filter(s => selectedSubjects.includes(s.id));
+
+    if (!medium || !grade || subject_list.length === 0) {
+      toast.error('Invalid selection. Please try again.');
+      return;
+    }
+
     stateManager.addJob({
       title,
       description,
-      posted_by: user,
-      min_salary: minSalary,
-      max_salary: maxSalary,
-      preferred_distance: 5,
-      medium: MOCK_MEDIUMS.find(m => m.id === mediumId),
-      grade: MOCK_GRADES.find(g => g.id === gradeId),
-      subjects: [MOCK_SUBJECTS[0]], // Simplified for demo
+      posted_by: user.id,
+      posted_by_name: (user.first_name + ' ' + user.last_name) || 'Anonymous',
+      budget_salary: maxSalary,
+      phone: 'N/A',
+      minimum_qualification: 'honours',
+      distance: 5,
+      medium,
+      grade,
+      subject_list,
       gender,
       teaching_mode: mode,
-      highest_qualification: 'honours'
+      updated_at: new Date().toISOString(),
     });
     onSuccess();
     onClose();
@@ -69,16 +141,28 @@ const PostJobModal: React.FC<PostJobModalProps> = ({ isOpen, onClose, user, onSu
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Medium</label>
-              <select value={mediumId} onChange={e => setMediumId(Number(e.target.value))} className="w-full px-4 py-2 border rounded-md">
-                {MOCK_MEDIUMS.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+              <select value={selectedMedium} onChange={e => setSelectedMedium(Number(e.target.value))} className="w-full px-4 py-2 border rounded-md">
+                <option value="">Select Medium</option>
+                {mediumOptions.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Grade</label>
-              <select value={gradeId} onChange={e => setGradeId(Number(e.target.value))} className="w-full px-4 py-2 border rounded-md">
-                {MOCK_GRADES.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+              <select value={selectedGrade} onChange={e => setSelectedGrade(Number(e.target.value))} className="w-full px-4 py-2 border rounded-md" disabled={!selectedMedium}>
+                <option value="">Select Grade</option>
+                {gradeOptions.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
               </select>
             </div>
+          </div>
+
+          <div>
+            <MultiSelect
+              label="Subjects"
+              options={subjectOptions}
+              selectedIds={selectedSubjects}
+              onChange={setSelectedSubjects}
+              placeholder="Select required subjects..."
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">

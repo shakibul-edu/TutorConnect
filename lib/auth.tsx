@@ -36,6 +36,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Sync session with local user state
   React.useEffect(() => {
     if (status === 'authenticated' && session?.user) {
+      console.log('🔍 Auth Debug - Session data:', {
+        user_id: (session as any).user_id,
+        is_teacher: (session as any).is_teacher,
+        banned: (session as any).banned,
+        email: session.user?.email,
+        full_session: session
+      });
+      
       // Map NextAuth session to app User type
       // Note: In a real app, you might fetch additional user details from your API here
       setUser(prev => {
@@ -44,16 +52,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return prev;
         }
         
-        return {
-          id: parseInt((session.user as any)?.id || '1'), // Fallback ID
+        const newUser = {
+          id: (session as any).user_id || parseInt((session.user as any)?.id || '1'),
           username: session.user?.name || 'User',
           email: session.user?.email || '',
           first_name: session.user?.name?.split(' ')[0] || '',
           last_name: session.user?.name?.split(' ').slice(1).join(' ') || '',
-          is_teacher: false, // Default to finder mode
-          banned: false,
+          is_teacher: (session as any).is_teacher || false,
+          banned: (session as any).banned || false,
           image: session.user?.image || undefined
         } as User;
+        
+        console.log('✅ Auth Debug - User object created:', newUser);
+        return newUser;
       });
     } else if (status === 'unauthenticated') {
       setUser(null);

@@ -5,10 +5,11 @@ import { useParams } from 'next/navigation';
 import { useRouter } from '../../../lib/router';
 import { useSession } from 'next-auth/react';
 import { ArrowLeft, ShieldCheck, Clock, FileText, CheckCircle, XCircle, User, MapPin, DollarSign, Briefcase, Users, Star } from 'lucide-react';
+import Availability from '../../../components/Availability';
 import { getTeacherFullProfile, getTeacherReviews } from '../../../services/backend';
 import { getBackendImageUrl } from '../../../utils/imageHelper';
 import ContactRequestModal from '@/components/ContactRequestModal';
-import { TeacherReview } from '../../../types';
+import { TeacherReview, AvailabilitySlot } from '../../../types';
 
 export default function TutorDetailsPage() {
     const params = useParams();
@@ -20,6 +21,8 @@ export default function TutorDetailsPage() {
     const [isContactModalOpen, setIsContactModalOpen] = useState(false);
     const [reviews, setReviews] = useState<TeacherReview[]>([]);
     const [reviewsLoading, setReviewsLoading] = useState(false);
+    const [availabilitySlots, setAvailabilitySlots] = useState<AvailabilitySlot[]>([]);
+    const scheduledAvailability = profileData?.scheduled_availability;
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -59,6 +62,49 @@ export default function TutorDetailsPage() {
         fetchProfile();
     }, [session, status, id]);
 
+    useEffect(() => {
+        if (!scheduledAvailability || !Array.isArray(scheduledAvailability)) {
+            setAvailabilitySlots([]);
+            return;
+        }
+
+        const slotsByTime = new Map<string, AvailabilitySlot>();
+
+        scheduledAvailability.forEach((slot: any) => {
+            const rawStart = slot.start_time || slot.start;
+            const rawEnd = slot.end_time || slot.end;
+            const day = slot.days_of_week || (typeof slot.days === 'string' ? slot.days : null);
+            const existingDays = Array.isArray(slot.days) ? slot.days : [];
+
+            if (!rawStart || !rawEnd) return;
+
+            const startTime = rawStart.substring(0, 5);
+            const endTime = rawEnd.substring(0, 5);
+            const timeKey = `${startTime}-${endTime}`;
+
+            if (!slotsByTime.has(timeKey)) {
+                slotsByTime.set(timeKey, {
+                    start: startTime,
+                    end: endTime,
+                    days: [],
+                });
+            }
+
+            const currentSlot = slotsByTime.get(timeKey);
+            if (!currentSlot) return;
+
+            if (day) {
+                if (!currentSlot.days.includes(day)) currentSlot.days.push(day);
+            } else if (existingDays.length > 0) {
+                existingDays.forEach((d: string) => {
+                    if (!currentSlot.days.includes(d)) currentSlot.days.push(d);
+                });
+            }
+        });
+
+        setAvailabilitySlots(Array.from(slotsByTime.values()));
+    }, [scheduledAvailability]);
+
     if (loading) {
         return (
             <div className="max-w-7xl mx-auto px-4 py-16 flex justify-center items-center">
@@ -76,21 +122,7 @@ export default function TutorDetailsPage() {
         );
     }
 
-    const { teacher_profile, academic_profiles, qualifications, scheduled_availability } = profileData;
-
-    // Group availability by time slots
-    const groupedAvailability = scheduled_availability.reduce((acc: any, slot: any) => {
-        const timeKey = `${slot.start_time.substring(0, 5)}-${slot.end_time.substring(0, 5)}`;
-        if (!acc[timeKey]) {
-            acc[timeKey] = {
-                start: slot.start_time.substring(0, 5),
-                end: slot.end_time.substring(0, 5),
-                days: []
-            };
-        }
-        acc[timeKey].days.push(slot.days_of_week);
-        return acc;
-    }, {});
+    const { teacher_profile, academic_profiles, qualifications } = profileData;
 
     return (
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -228,43 +260,8 @@ export default function TutorDetailsPage() {
 
                     <div className="pt-2">
                         <label className="block text-sm font-medium text-gray-700 mb-2">Weekly Availability</label>
-                        {Object.values(groupedAvailability).length > 0 ? (
-                            <div className="space-y-4">
-                                {Object.values(groupedAvailability).map((slot: any, index: number) => (
-                                    <div key={index} className="bg-white hover:shadow-md transition-all duration-200 p-5 rounded-lg border border-gray-200">
-                                        <div className="mb-2 flex items-center gap-2 text-indigo-600 font-medium text-sm">
-                                            <Clock className="w-4 h-4" />
-                                            <span>Schedule {index + 1}</span>
-                                        </div>
-                                        <div className="space-y-3">
-                                            <div>
-                                                <label className="block text-sm font-semibold text-gray-700 mb-2">Selected Days</label>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {slot.days.map((day: string, idx: number) => (
-                                                        <span key={idx} className="px-3 py-1 bg-indigo-600 text-white rounded-md text-xs font-medium">
-                                                            {day}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-3 bg-white p-3 border border-gray-200 rounded-md shadow-sm">
-                                                <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                                                <div className="flex items-center gap-2 flex-1">
-                                                    <div className="flex-1">
-                                                        <label className="text-[10px] font-semibold text-gray-500">Start Time</label>
-                                                        <p className="text-sm font-medium text-gray-700">{slot.start}</p>
-                                                    </div>
-                                                    <span className="text-gray-400 font-medium">-</span>
-                                                    <div className="flex-1">
-                                                        <label className="text-[10px] font-semibold text-gray-500">End Time</label>
-                                                        <p className="text-sm font-medium text-gray-700">{slot.end}</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                        {availabilitySlots.length > 0 ? (
+                            <Availability slots={availabilitySlots} setSlots={setAvailabilitySlots} readOnly />
                         ) : (
                             <p className="text-gray-500 text-sm p-4 bg-gray-50 rounded-md border border-gray-200">No availability schedule set</p>
                         )}

@@ -1,12 +1,11 @@
 
 import { JobPost, Bid, TeacherProfile, User, BidStatus, Review } from '../types';
-import { MOCK_JOBS, MOCK_TEACHERS } from './mockData';
 
 class StateManager {
-  private jobs: JobPost[] = MOCK_JOBS.map(j => ({ ...j, status: 'open' }));
+  private jobs: JobPost[] = [];
   private bids: Bid[] = [];
   private reviews: Review[] = [];
-  private teachers: TeacherProfile[] = [...MOCK_TEACHERS];
+  private teachers: TeacherProfile[] = [];
 
   getJobs() {
     return this.jobs;

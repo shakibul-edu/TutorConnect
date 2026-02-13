@@ -38,7 +38,7 @@ export interface FetchApiOptions {
     method?: HttpMethod;
     headers?: Record<string, string>;
     body?: any;
-    params?: Record<string, string | number>;
+    params?: Record<string, string | number | Array<string | number>>;
     isFormData?: boolean;
 }
 
@@ -57,8 +57,18 @@ export class FetchApi {
         }
 
         // Format 1: { "detail": "Error message" }
+        // Format 1b: { "detail": ["Error message"] }
         if (errorData.detail) {
-            return typeof errorData.detail === 'string' ? errorData.detail : fallbackMessage;
+            if (typeof errorData.detail === 'string') {
+                return errorData.detail;
+            }
+            if (Array.isArray(errorData.detail)) {
+                const detailMessages = errorData.detail.filter((msg: unknown) => typeof msg === 'string');
+                if (detailMessages.length > 0) {
+                    return detailMessages.join('\n');
+                }
+            }
+            return fallbackMessage;
         }
 
         // Format 2: Field-based validation errors
@@ -114,9 +124,23 @@ export class FetchApi {
         return `${url}/${cleanEndpoint}`;
     }
 
-    private static buildUrl(url: string, params?: Record<string, string | number>): string {
+    private static buildUrl(url: string, params?: Record<string, string | number | Array<string | number>>): string {
         if (!params) return url;
-        const query = new URLSearchParams(params as Record<string, string>).toString();
+        const searchParams = new URLSearchParams();
+
+        Object.entries(params).forEach(([key, value]) => {
+            if (Array.isArray(value)) {
+                value.forEach((item) => {
+                    if (item !== undefined && item !== null) {
+                        searchParams.append(key, String(item));
+                    }
+                });
+            } else if (value !== undefined && value !== null) {
+                searchParams.append(key, String(value));
+            }
+        });
+
+        const query = searchParams.toString();
         return query ? `${url}?${query}` : url;
     }
 
@@ -153,7 +177,8 @@ export class FetchApi {
         if (url.includes('undefined')) {
             console.error('Invalid URL constructed:', fetchUrl);
         }
-
+        console.log('fetchUrl', fetchUrl);
+        console.log('fetchOptions', fetchOptions);
         let response = await fetch(fetchUrl, fetchOptions);
 
         // Handle 401 Unauthorized - token is invalid/expired
@@ -287,7 +312,7 @@ export class FetchApi {
 
 
 
-    static get<T = any>(endpoint: string, params?: Record<string, string | number>, headers?: Record<string, string>, body?: any) {
+    static get<T = any>(endpoint: string, params?: Record<string, string | number | Array<string | number>>, headers?: Record<string, string>, body?: any) {
         return this.request<T>(endpoint, { method: 'GET', params, headers, body });
     }
 

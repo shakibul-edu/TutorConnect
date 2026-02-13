@@ -6,6 +6,7 @@ import { toast } from '../lib/toast';
 import Availability from './Availability';
 import MultiSelect from './MultiSelect';
 import { AvailabilitySlot, Education, Qualification, Gender, TeachingMode, Medium, Grade, Subject } from '../types';
+import { validateAvailabilitySlots } from '../utils/availability';
 import { Save, Loader2, Upload, X } from 'lucide-react';
 import EducationSection from './profile-form/EducationSection';
 import QualificationSection from './profile-form/QualificationSection';
@@ -39,36 +40,32 @@ const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/web
 export const educationSchema = z.object({
     institution: z.string().min(1, "Institution is required"),
     degree: z.string().min(1, "Degree is required"),
-    year: z.string().regex(/^\d{4}$/, "Year must be a 4-digit number"),
+  year: z.coerce.string().regex(/^\d{4}$/, "Year must be a 4-digit number"),
     result: z.string().min(1, "Result/GPA is required"),
-    // Allow File or undefined/null (for existing entries that might not rely on file object here)
-    // We only validate size if it's a new file instance
-    certificate: z.custom<File | null | undefined>((val) => {
-        return val instanceof File || val === null || val === undefined;
-    }).refine((file) => {
-        if (file instanceof File) return file.size <= MAX_FILE_SIZE;
-        return true;
+  certificate: z.union([z.instanceof(File), z.string(), z.null(), z.undefined()])
+    .refine((file) => {
+      if (file instanceof File) return file.size <= MAX_FILE_SIZE;
+      return true;
     }, "File size must be less than 2MB")
     .refine((file) => {
-        if (file instanceof File) return ACCEPTED_IMAGE_TYPES.includes(file.type);
-        return true;
+      if (file instanceof File) return ACCEPTED_IMAGE_TYPES.includes(file.type);
+      return true;
     }, "Only image files (JPEG, PNG, WEBP) are allowed")
 });
 
 export const qualificationSchema = z.object({
     organization: z.string().min(1, "Organization is required"),
     skill: z.string().min(1, "Skill/Certification name is required"),
-    year: z.string().regex(/^\d{4}$/, "Year must be a 4-digit number"),
+  year: z.coerce.string().regex(/^\d{4}$/, "Year must be a 4-digit number"),
     result: z.string().optional(),
-    certificate: z.custom<File | null | undefined>((val) => {
-        return val instanceof File || val === null || val === undefined;
-    }).refine((file) => {
-        if (file instanceof File) return file.size <= MAX_FILE_SIZE;
-        return true;
+  certificate: z.union([z.instanceof(File), z.string(), z.null(), z.undefined()])
+    .refine((file) => {
+      if (file instanceof File) return file.size <= MAX_FILE_SIZE;
+      return true;
     }, "File size must be less than 2MB")
     .refine((file) => {
-        if (file instanceof File) return ACCEPTED_IMAGE_TYPES.includes(file.type);
-        return true;
+      if (file instanceof File) return ACCEPTED_IMAGE_TYPES.includes(file.type);
+      return true;
     }, "Only image files (JPEG, PNG, WEBP) are allowed")
 });
 
@@ -272,7 +269,9 @@ const TeacherProfileForm: React.FC = () => {
                     id: e.id,
                     institution: e.institution,
                     degree: e.degree,
-                    year: e.graduation_year,
+                year: e.graduation_year !== undefined && e.graduation_year !== null
+                  ? String(e.graduation_year)
+                  : '',
                     result: e.results,
                     certificate: e.certificates
                 }));
@@ -286,7 +285,9 @@ const TeacherProfileForm: React.FC = () => {
                     id: q.id,
                     organization: q.organization,
                     skill: q.skill,
-                    year: q.year,
+                year: q.year !== undefined && q.year !== null
+                  ? String(q.year)
+                  : '',
                     result: q.results,
                     certificate: q.certificates
                 }));
@@ -384,6 +385,14 @@ const TeacherProfileForm: React.FC = () => {
             // Scroll to top or first error could be good, but simple toast for now
             return;
         }
+
+          const availabilityValidation = validateAvailabilitySlots(availability);
+          if (!availabilityValidation.isValid) {
+            setErrors({ availability: availabilityValidation.errors.join(' ') });
+            toast.error(availabilityValidation.errors[0] || "Please fix availability details.");
+            setSubmitting(false);
+            return;
+          }
 
       const isNewProfile = !profileId;
       const profileChanged = isNewProfile || (() => {

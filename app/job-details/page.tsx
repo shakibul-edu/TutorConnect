@@ -1,24 +1,58 @@
 'use client';
 
-import React, { useState } from 'react';
-import { stateManager } from '../../services/stateManager';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from '../../lib/router';
 import { useAuth } from '../../lib/auth';
 import { MapPin, DollarSign, BookOpen, Clock, Calendar, User, ArrowLeft, Share2, Flag } from 'lucide-react';
 import BidModal from '../../components/BidModal';
-import { MOCK_TEACHERS } from '../../services/mockData';
+import { getJobPost } from '../../services/backend';
+import { JobPost } from '../../types';
 
 export default function JobDetailsPage({ id }: { id: string }) {
     const { push } = useRouter();
     const { user } = useAuth();
+    const [job, setJob] = useState<JobPost | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [isBidModalOpen, setIsBidModalOpen] = useState(false);
     
-    const job = stateManager.getJobs().find(j => j.id.toString() === id);
+    useEffect(() => {
+        const fetchJob = async () => {
+            try {
+                const token = localStorage.getItem('auth_token');
+                if (!token) {
+                    // Handle unauthenticated case if needed, or allow public view
+                    // For now assuming public view is allowed or token handling is done elsewhere
+                }
+                // Pass token if available, otherwise might need public endpoint or handle auth
+                // Ideally getJobPost should handle public access or we assume user is logged in
+                const fetchedJob = await getJobPost(token || '', id);
+                setJob(fetchedJob);
+            } catch (err) {
+                console.error("Failed to fetch job", err);
+                setError("Failed to load job details.");
+            } finally {
+                setLoading(false);
+            }
+        };
 
-    if (!job) {
+        if (id) {
+            fetchJob();
+        }
+    }, [id]);
+
+    if (loading) {
+        return (
+             <div className="max-w-7xl mx-auto px-4 py-16 flex justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+            </div>
+        );
+    }
+
+    if (error || !job) {
         return (
             <div className="max-w-7xl mx-auto px-4 py-16 text-center">
-                <h2 className="text-2xl font-bold text-gray-900">Job Not Found</h2>
+                <h2 className="text-2xl font-bold text-gray-900">{error || "Job Not Found"}</h2>
                 <button onClick={() => push('jobs')} className="mt-4 text-indigo-600 hover:underline">Back to Jobs</button>
             </div>
         );
@@ -54,14 +88,15 @@ export default function JobDetailsPage({ id }: { id: string }) {
                                 </span>
                                 <span className="flex items-center gap-1">
                                     <MapPin className="w-4 h-4" />
-                                    {job.preferred_distance}km radius
+                                    {job.distance}km radius
                                 </span>
                             </div>
                         </div>
-                        {user?.is_teacher && (
+                        {user?.is_teacher && job.is_biddable !== false && (
                             <button 
                                 onClick={() => setIsBidModalOpen(true)}
-                                className="bg-indigo-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-indigo-700 transition-shadow shadow-md"
+                                disabled={job.status !== 'open'}
+                                className="bg-indigo-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-indigo-700 transition-shadow shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 Apply Now
                             </button>
@@ -83,7 +118,7 @@ export default function JobDetailsPage({ id }: { id: string }) {
                             <ul className="space-y-3">
                                 <li className="flex items-center gap-3 text-gray-700">
                                     <BookOpen className="w-5 h-5 text-gray-400" />
-                                    <span>Subject: <strong>{job.subjects.map(s => s.name).join(', ')}</strong></span>
+                                    <span>Subject: <strong>{job.subject_list?.map(s => s.name).join(', ') || 'N/A'}</strong></span>
                                 </li>
                                 <li className="flex items-center gap-3 text-gray-700">
                                     <Calendar className="w-5 h-5 text-gray-400" />
@@ -99,6 +134,19 @@ export default function JobDetailsPage({ id }: { id: string }) {
                                 </li>
                             </ul>
                         </section>
+                         {job.availability && job.availability.length > 0 && (
+                            <section>
+                                <h3 className="text-xl font-bold text-gray-900 mb-4">Availability</h3>
+                                <div className="space-y-2">
+                                    {job.availability.map((slot, idx) => (
+                                        <div key={idx} className="flex gap-2 text-sm text-gray-600">
+                                            <span className="font-medium capitalize">{slot.days.join(', ')}:</span>
+                                            <span>{slot.start} - {slot.end}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
+                        )}
                     </div>
 
                     <div className="space-y-6">
@@ -106,7 +154,7 @@ export default function JobDetailsPage({ id }: { id: string }) {
                             <h4 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">Salary & Compensation</h4>
                             <div className="flex items-center gap-2 text-2xl font-bold text-gray-900">
                                 <DollarSign className="w-6 h-6 text-green-600" />
-                                {job.min_salary} - {job.max_salary}
+                                {job.budget_salary}
                                 <span className="text-sm font-normal text-gray-500 self-end mb-1">BDT/month</span>
                             </div>
                         </div>
@@ -115,11 +163,11 @@ export default function JobDetailsPage({ id }: { id: string }) {
                             <h4 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">About the Parent</h4>
                             <div className="flex items-center gap-3 mb-2">
                                 <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-700 font-bold">
-                                    {job.posted_by.first_name[0]}
+                                    {job.posted_by_name}
                                 </div>
                                 <div>
-                                    <p className="font-bold text-gray-900">{job.posted_by.first_name} {job.posted_by.last_name}</p>
-                                    <p className="text-xs text-gray-500">Member since 2023</p>
+                                    <p className="font-bold text-gray-900">{job.posted_by_name}</p>
+                                    <p className="text-xs text-gray-500">Member</p>
                                 </div>
                             </div>
                         </div>
@@ -137,7 +185,6 @@ export default function JobDetailsPage({ id }: { id: string }) {
                     isOpen={isBidModalOpen}
                     onClose={() => setIsBidModalOpen(false)}
                     job={job}
-                    tutor={MOCK_TEACHERS[0]} // Using mock for demo
                     onSuccess={() => {
                         alert('Application submitted!');
                         setIsBidModalOpen(false);

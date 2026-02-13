@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Outfit', sans-serif;
+  background-color: #f8fafc;
+}
+
+.font-school {
+  font-family: 'Fredoka', sans-serif;
+}
+
+.text-chalk {
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.1);
+}
+
+.lang-bn,
+.lang-bn .font-sans,
+.lang-bn .font-display,
+.lang-bn .font-school {
+  font-family: 'Baloo Da 2', sans-serif !important;
+}

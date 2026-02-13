@@ -60,7 +60,7 @@ const Hero: React.FC = () => {
             <div className="pt-8 flex items-center space-x-4 text-sm text-slate-500 font-bold">
               <div className="flex -space-x-4">
                  {[10, 11, 12, 13].map(i => (
-                   <Image key={i} className="rounded-full border-4 border-white shadow-md bg-white object-cover" src={`https://api.dicebear.com/9.x/notionists/svg?seed=${i}`} alt="User" width={40} height={40} />
+                   <Image key={i} className="rounded-full border-4 border-white shadow-md bg-white object-cover" src={`https://api.dicebear.com/9.x/notionists/svg?seed=${i}`} alt="User" width={40} height={40} unoptimized />
                  ))}
               </div>
               <p className="font-school text-lg text-brand-600">{t.hero.social}</p>
@@ -83,16 +83,14 @@ const Hero: React.FC = () => {
                 width={500}
                 height={500}
                 priority
+                unoptimized
               />
 
 
-              {/* Floating Hero Logo (Replaces A+) */}
-              <div className="absolute -top-12 -right-8 bg-white/90 backdrop-blur-xl p-5 rounded-[2rem] shadow-2xl border border-white/50 animate-[bounce_4s_infinite] z-30">
-                <Logo className="w-24 h-24 drop-shadow-xl" />
-              </div>
+              
               
                {/* Floating Element 2 */}
-               <div className="absolute bottom-10 -left-10 bg-white p-4 rounded-2xl shadow-xl border-2 border-slate-100 animate-bounce duration-[4000ms] delay-700 z-20 flex items-center gap-3">
+               <div className="absolute bottom-10 -left-10 bg-white p-4 rounded-2xl shadow-xl border-2 border-slate-100 z-20 flex items-center gap-3">
                 <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
                 <span className="font-bold font-school text-slate-700">Tutor Found!</span>
               </div>
