@@ -1,11 +1,12 @@
 
 import React, { useEffect, useState } from 'react';
-import { X, Save } from 'lucide-react';
+import { X, Save, Loader2 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
-import { User, Gender, TeachingMode, Medium, Grade, Subject } from '../types';
+import { User, Gender, TeachingMode, Medium, Grade, Subject, AvailabilitySlot } from '../types';
 import MultiSelect from './MultiSelect';
-import { stateManager } from '../services/stateManager';
-import { getMediums, getGradesbyMedium, getSubjects } from '../services/backend';
+import Availability from './Availability';
+import { getMediums, getGradesbyMedium, getSubjects, createJobPost, submitJobPostAvailability } from '../services/backend';
+import { validateAvailabilitySlots } from '../utils/availability';
 import { toast } from '../lib/toast';
 
 interface PostJobModalProps {
@@ -18,8 +19,8 @@ interface PostJobModalProps {
 const PostJobModal: React.FC<PostJobModalProps> = ({ isOpen, onClose, user, onSuccess }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [minSalary, setMinSalary] = useState(3000);
-  const [maxSalary, setMaxSalary] = useState(8000);
+  const [phone, setPhone] = useState('');
+  const [budgetSalary, setBudgetSalary] = useState(4000);
   const [mediumOptions, setMediumOptions] = useState<Medium[]>([]);
   const [gradeOptions, setGradeOptions] = useState<Grade[]>([]);
   const [subjectOptions, setSubjectOptions] = useState<Subject[]>([]);
@@ -27,7 +28,12 @@ const PostJobModal: React.FC<PostJobModalProps> = ({ isOpen, onClose, user, onSu
   const [selectedGrade, setSelectedGrade] = useState<number | ''>('');
   const [selectedSubjects, setSelectedSubjects] = useState<number[]>([]);
   const [gender, setGender] = useState<Gender>('any');
-  const [mode, setMode] = useState<TeachingMode>('offline');
+  const [teachingMode, setTeachingMode] = useState<TeachingMode>('offline');
+  const [minQualification, setMinQualification] = useState('degree');
+  const [availability, setAvailability] = useState<AvailabilitySlot[]>([
+    { start: "16:00", end: "21:00", days: ["MO", "TU", "WE", "TH", "FR"] },
+  ]);
+  const [submitting, setSubmitting] = useState(false);
   // @ts-ignore
   const { data: session } = useSession();
   // @ts-ignore
@@ -75,7 +81,7 @@ const PostJobModal: React.FC<PostJobModalProps> = ({ isOpen, onClose, user, onSu
     }
   }, [token, selectedGrade]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) {
       toast.error('You must be logged in to post a job.');
@@ -87,33 +93,63 @@ const PostJobModal: React.FC<PostJobModalProps> = ({ isOpen, onClose, user, onSu
       return;
     }
 
-    const medium = mediumOptions.find(m => m.id === selectedMedium);
-    const grade = gradeOptions.find(g => g.id === selectedGrade);
-    const subject_list = subjectOptions.filter(s => selectedSubjects.includes(s.id));
-
-    if (!medium || !grade || subject_list.length === 0) {
-      toast.error('Invalid selection. Please try again.');
+    const availabilityValidation = validateAvailabilitySlots(availability);
+    if (!availabilityValidation.isValid) {
+      toast.error(availabilityValidation.errors[0] || 'Please fix availability details.');
       return;
     }
 
-    stateManager.addJob({
-      title,
-      description,
-      posted_by: user.id,
-      posted_by_name: (user.first_name + ' ' + user.last_name) || 'Anonymous',
-      budget_salary: maxSalary,
-      phone: 'N/A',
-      minimum_qualification: 'honours',
-      distance: 5,
-      medium,
-      grade,
-      subject_list,
-      gender,
-      teaching_mode: mode,
-      updated_at: new Date().toISOString(),
-    });
-    onSuccess();
-    onClose();
+    setSubmitting(true);
+
+    try {
+      const payload = {
+        title,
+        description,
+        phone: phone || 'N/A',
+        budget_salary: budgetSalary,
+        gender,
+        teaching_mode: teachingMode,
+        minimum_qualification: minQualification,
+        medium: Number(selectedMedium),
+        grade: Number(selectedGrade),
+        subject_list: selectedSubjects
+      };
+
+      const jobPost = await createJobPost(token, payload);
+      
+      if (jobPost && jobPost.id) {
+        // Create Availability
+        const availPayload = availability.map(slot => ({
+          job_post: jobPost.id,
+          start: slot.start,
+          end: slot.end,
+          days: slot.days,
+        }));
+
+        if (availPayload.length > 0) {
+          await submitJobPostAvailability(token, availPayload);
+        }
+      }
+
+      toast.success('Job posted successfully!');
+      onSuccess();
+      onClose();
+      
+      // Reset form
+      setTitle('');
+      setDescription('');
+      setPhone('');
+      setSelectedMedium('');
+      setSelectedGrade('');
+      setSelectedSubjects([]);
+      setAvailability([{ start: "16:00", end: "21:00", days: ["MO", "TU", "WE", "TH", "FR"] }]);
+    } catch (error) {
+      console.error('Job post error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to post job';
+      toast.error(errorMessage);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -135,6 +171,17 @@ const PostJobModal: React.FC<PostJobModalProps> = ({ isOpen, onClose, user, onSu
               onChange={e => setTitle(e.target.value)}
               className="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-indigo-500"
               placeholder="e.g. Need Math Tutor for Class 8"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={e => setPhone(e.target.value)}
+              className="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-indigo-500"
+              placeholder="01XXXXXXXXX"
             />
           </div>
 
@@ -165,15 +212,20 @@ const PostJobModal: React.FC<PostJobModalProps> = ({ isOpen, onClose, user, onSu
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Min Salary (BDT)</label>
-              <input type="number" value={minSalary} onChange={e => setMinSalary(Number(e.target.value))} className="w-full px-4 py-2 border rounded-md" />
+          <div>
+            <div className="flex justify-between">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Budget / Salary</label>
+              <span className="text-sm font-bold text-indigo-600">{budgetSalary} BDT</span>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Max Salary (BDT)</label>
-              <input type="number" value={maxSalary} onChange={e => setMaxSalary(Number(e.target.value))} className="w-full px-4 py-2 border rounded-md" />
-            </div>
+            <input
+              type="range"
+              min={500}
+              max={25000}
+              step={500}
+              value={budgetSalary}
+              onChange={e => setBudgetSalary(Number(e.target.value))}
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -187,12 +239,28 @@ const PostJobModal: React.FC<PostJobModalProps> = ({ isOpen, onClose, user, onSu
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Teaching Mode</label>
-              <select value={mode} onChange={e => setMode(e.target.value as TeachingMode)} className="w-full px-4 py-2 border rounded-md">
+              <select value={teachingMode} onChange={e => setTeachingMode(e.target.value as TeachingMode)} className="w-full px-4 py-2 border rounded-md">
                 <option value="offline">Offline / Home</option>
                 <option value="online">Online</option>
                 <option value="any">Both</option>
               </select>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Min Qualification Required</label>
+            <select
+              value={minQualification}
+              onChange={e => setMinQualification(e.target.value)}
+              className="w-full px-4 py-2 border rounded-md"
+            >
+              <option value="ssc">SSC</option>
+              <option value="hsc">HSC</option>
+              <option value="degree">Degree</option>
+              <option value="honours">Honours</option>
+              <option value="master">Masters</option>
+              <option value="phd">PhD</option>
+            </select>
           </div>
 
           <div>
@@ -207,11 +275,41 @@ const PostJobModal: React.FC<PostJobModalProps> = ({ isOpen, onClose, user, onSu
             />
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Desired Tutoring Days & Times</label>
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <Availability 
+                slots={availability} 
+                setSlots={setAvailability} 
+              />
+            </div>
+          </div>
+
           <div className="flex justify-end gap-3 pt-4">
-            <button type="button" onClick={onClose} className="px-6 py-2 border rounded-md hover:bg-gray-50">Cancel</button>
-            <button type="submit" className="px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center gap-2">
-              <Save className="w-4 h-4" />
-              Post Job Now
+            <button 
+              type="button" 
+              onClick={onClose} 
+              disabled={submitting}
+              className="px-6 py-2 border rounded-md hover:bg-gray-50 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              disabled={submitting}
+              className="px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Posting...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  Post Job Now
+                </>
+              )}
             </button>
           </div>
         </form>

@@ -5,16 +5,20 @@
 import React, { useState, useEffect } from 'react';
 import { TutorCard } from '../../components/TutorCard';
 import Sidebar, { FilterState } from '../../components/Sidebar';
-import { SlidersHorizontal } from 'lucide-react';
+import { SlidersHorizontal, Plus } from 'lucide-react';
 import { getTeachers } from '../../services/backend';
 import { useSession } from 'next-auth/react';
+import PostJobModal from '../../components/PostJobModal';
+import { useAuth } from '../../lib/auth';
 
 const TutorsPage: React.FC = () => {
     const { data: session, status } = useSession();
+    const { user } = useAuth();
     
   const [showMobileFilter, setShowMobileFilter] = useState(false);
     const [tutors, setTutors] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
+    const [isPostJobModalOpen, setIsPostJobModalOpen] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
     postId: "", // Acts as Tutor ID search
     schedule: undefined,
@@ -113,6 +117,29 @@ const TutorsPage: React.FC = () => {
             )}
         </div>
       </div>
+
+      {/* Floating Post Job Button (Mobile Only) */}
+      {user && (
+        <button
+          onClick={() => setIsPostJobModalOpen(true)}
+          className="md:hidden fixed bottom-6 right-6 bg-indigo-600 text-white p-4 rounded-full shadow-2xl hover:bg-indigo-700 active:scale-95 transition-all z-50 flex items-center justify-center"
+          aria-label="Post a job"
+        >
+          <Plus className="w-6 h-6" />
+        </button>
+      )}
+
+      {/* Post Job Modal */}
+      {isPostJobModalOpen && user && (
+        <PostJobModal
+          isOpen={isPostJobModalOpen}
+          onClose={() => setIsPostJobModalOpen(false)}
+          user={user}
+          onSuccess={() => {
+            setIsPostJobModalOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 };

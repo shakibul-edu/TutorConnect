@@ -112,9 +112,9 @@ const JobPostForm: React.FC = () => {
             gender,
             teaching_mode: teachingMode,
             minimum_qualification: minQualification,
-            medium_id: Number(selectedMedium),
-            grade_id: Number(selectedGrade),
-            subject_ids: selectedSubjects
+            medium: Number(selectedMedium),
+            grade: Number(selectedGrade),
+            subject_list: selectedSubjects
         };
 
         const jobPost = await createJobPost(token, payload);
@@ -261,7 +261,8 @@ const JobPostForm: React.FC = () => {
                     <option value="hsc">HSC</option>
                     <option value="degree">Degree</option>
                     <option value="honours">Honours</option>
-                    <option value="masters">Masters</option>
+                    <option value="master">Masters</option>
+                    <option value="phd">PhD</option>
                 </select>
             </div>
 

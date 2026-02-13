@@ -274,6 +274,9 @@ const Navbar: React.FC = () => {
           <Link href="home" className="text-slate-600 hover:text-brand-600 font-medium p-2 block" onClick={() => setIsMobileMenuOpen(false)}>Home</Link>
           <Link href="/tuition-jobs" className="text-slate-600 hover:text-brand-600 font-medium p-2 block" onClick={() => setIsMobileMenuOpen(false)}>Tuition Jobs</Link>
           <Link href="/tutors" className="text-slate-600 hover:text-brand-600 font-medium p-2 block" onClick={() => setIsMobileMenuOpen(false)}>Find Tutors</Link>
+          {displayUser && (
+            <Link href="/job-post/new" className="text-indigo-600 hover:text-indigo-700 font-bold p-2 block bg-indigo-50 rounded-lg" onClick={() => setIsMobileMenuOpen(false)}>📝 Post a Job</Link>
+          )}
           
           <a href="/#features" className="text-slate-600 hover:text-brand-600 font-medium p-2 block" onClick={() => setIsMobileMenuOpen(false)}>{t.nav.features}</a>
           <a href="/#how-it-works" className="text-slate-600 hover:text-brand-600 font-medium p-2 block" onClick={() => setIsMobileMenuOpen(false)}>{t.nav.howItWorks}</a>
