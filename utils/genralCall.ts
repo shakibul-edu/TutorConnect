@@ -38,7 +38,11 @@ export async function setLocation(token: string, location: string, params: { upd
 export async function getLocation(token: string) {
     if (token) {
         try {
-            const response = await FetchApi.get('/get-location/', {}, {'Authorization': `Bearer ${token}`});
+            const response = await FetchApi.request('/get-location/', { 
+                method: 'GET', 
+                headers: {'Authorization': `Bearer ${token}`},
+                skipToast: true 
+            });
             if(response.location){
                 return response.location;
             } else {

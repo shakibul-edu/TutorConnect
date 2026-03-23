@@ -11,6 +11,8 @@ import { Save, Loader2, Upload, X } from 'lucide-react';
 import EducationSection from './profile-form/EducationSection';
 import QualificationSection from './profile-form/QualificationSection';
 import { useLanguage } from '../contexts/LanguageContext';
+import useLocation from '../LocationHook';
+import LocationBanner from './LocationBanner';
 import { 
     getMediums, 
     getGradesbyMedium, 
@@ -102,6 +104,15 @@ const TeacherProfileForm: React.FC = () => {
   // @ts-ignore
   const { data: session } = useSession();
   const { push } = useRouter();
+
+  // Location Hook tracking
+  const { location, retryLocation } = useLocation(session);
+  const [hasLocation, setHasLocation] = useState(true);
+
+  useEffect(() => {
+     const storedLocation = localStorage.getItem('user_location');
+     setHasLocation(!!location || !!storedLocation);
+  }, [location]);
 
   // Profile ID tracking
   const [profileId, setProfileId] = useState<number | null>(null);
@@ -677,64 +688,76 @@ const TeacherProfileForm: React.FC = () => {
   const mappedSubjects = subjectOptions.map(s => ({id: s.id, name: s.name}));
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8 bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+    <form onSubmit={handleSubmit} className="space-y-8 bg-white p-6 rounded-lg shadow-sm border border-gray-200 relative">
+      {!hasLocation && (
+          <div className="absolute inset-0 z-50 bg-white/60 backdrop-blur-[2px] flex flex-col items-center justify-start pt-10 px-4 rounded-lg">
+              <div className="w-full max-w-2xl bg-white shadow-xl rounded-xl overflow-hidden border border-amber-200">
+                  <LocationBanner 
+                      type="permission" 
+                      message="Location is required to create or edit your teacher profile. Please enable location." 
+                      onConfirm={retryLocation} 
+                  />
+              </div>
+          </div>
+      )}
       
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 border-b pb-2">
-            {profileId ? t.actions.updateProfile : t.actions.createProfile}
-        </h1>
-        <p className="text-gray-500 mt-2">Update your information to attract the right students.</p>
-      </div>
-
-      {/* Profile Picture Upload Section */}
-      <div className="flex justify-center">
-        <div className="w-full max-w-sm">
-          <label className="block text-sm font-medium text-gray-700 mb-4 text-center">Profile Picture</label>
-          <div className="relative">
-            {profilePicturePreview ? (
-              <div className="relative inline-block w-full">
-                <Image
-                  src={profilePicturePreview} 
-                  alt="Profile preview" 
-                  width={128}
-                  height={128}
-                  className="w-32 h-32 rounded-full object-cover mx-auto border-4 border-indigo-600 shadow-lg"
-                />
-                <button
-                  type="button"
-                  onClick={clearProfilePicture}
-                  className="absolute top-0 right-12 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <div className="w-32 h-32 rounded-full mx-auto border-4 border-dashed border-gray-300 flex items-center justify-center bg-gray-50">
-                <Upload className="w-8 h-8 text-gray-400" />
-              </div>
-            )}
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleProfilePictureChange}
-              className="absolute inset-0 w-32 h-32 rounded-full mx-auto opacity-0 cursor-pointer"
-              title="Click to upload profile picture"
-            />
+      <div className={!hasLocation ? 'opacity-40 pointer-events-none select-none' : ''}>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 border-b pb-2">
+                {profileId ? t.actions.updateProfile : t.actions.createProfile}
+            </h1>
+            <p className="text-gray-500 mt-2">Update your information to attract the right students.</p>
           </div>
 
-          <p className="text-xs text-gray-500 text-center mt-2">{t.profile.uploadPhoto}</p>
-          {errors.profilePicture && <p className="text-red-500 text-xs text-center mt-1">{errors.profilePicture}</p>}
-        </div>
-      </div>
+          {/* Profile Picture Upload Section */}
+          <div className="flex justify-center mt-8">
+            <div className="w-full max-w-sm">
+              <label className="block text-sm font-medium text-gray-700 mb-4 text-center">Profile Picture</label>
+              <div className="relative">
+                {profilePicturePreview ? (
+                  <div className="relative inline-block w-full">
+                    <Image
+                      src={profilePicturePreview} 
+                      alt="Profile preview" 
+                      width={128}
+                      height={128}
+                      className="w-32 h-32 rounded-full object-cover mx-auto border-4 border-indigo-600 shadow-lg"
+                    />
+                    <button
+                      type="button"
+                      onClick={clearProfilePicture}
+                      className="absolute top-0 right-12 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="w-32 h-32 rounded-full mx-auto border-4 border-dashed border-gray-300 flex items-center justify-center bg-gray-50">
+                    <Upload className="w-8 h-8 text-gray-400" />
+                  </div>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleProfilePictureChange}
+                  className="absolute inset-0 w-32 h-32 rounded-full mx-auto opacity-0 cursor-pointer"
+                  title="Click to upload profile picture"
+                />
+              </div>
 
-      {loading && !profileId && !mediumOptions.length ? (
-          <div className="flex justify-center p-10"><Loader2 className="animate-spin text-indigo-600 w-8 h-8" /></div>
-      ) : (
-      <>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t.profile.bio}</label>
+              <p className="text-xs text-gray-500 text-center mt-2">{t.profile.uploadPhoto}</p>
+              {errors.profilePicture && <p className="text-red-500 text-xs text-center mt-1">{errors.profilePicture}</p>}
+            </div>
+          </div>
+
+          {loading && !profileId && !mediumOptions.length ? (
+              <div className="flex justify-center p-10"><Loader2 className="animate-spin text-indigo-600 w-8 h-8" /></div>
+          ) : (
+          <>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t.profile.bio}</label>
             <textarea
               value={bio}
               onChange={(e) => setBio(e.target.value)}
@@ -890,7 +913,7 @@ const TeacherProfileForm: React.FC = () => {
       <div className="flex justify-end pt-4">
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || !hasLocation}
           className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-all"
         >
           {submitting ? <Loader2 className="animate-spin w-5 h-5 mr-2" /> : <Save className="w-5 h-5 mr-2" />}
@@ -899,6 +922,7 @@ const TeacherProfileForm: React.FC = () => {
       </div>
       </>
       )}
+      </div>
     </form>
   );
 };

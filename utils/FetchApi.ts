@@ -11,6 +11,7 @@ export interface FetchApiOptions {
     params?: Record<string, string | number | Array<string | number>>;
     isFormData?: boolean;
     skipAuth?: boolean;
+    skipToast?: boolean;
 }
 
 export class FetchApi {
@@ -51,7 +52,7 @@ export class FetchApi {
         endpoint: string,
         options: FetchApiOptions = {}
     ): Promise<T> {
-        const { method = 'GET', headers = {}, body, params, isFormData = false, skipAuth = false } = options;
+        const { method = 'GET', headers = {}, body, params, isFormData = false, skipAuth = false, skipToast = false } = options;
         const url = this.buildEndpointUrl(endpoint);
         const fetchUrl = this.buildUrl(url, params);
 
@@ -98,7 +99,7 @@ export class FetchApi {
                 }
 
                 // Show toast for error - strictly client side, will be ignored if on server (toast implementation is safe)
-                if (typeof window !== 'undefined') {
+                if (typeof window !== 'undefined' && !skipToast) {
                     toast.error(errorMessage);
                 }
                 throw new Error(errorMessage);

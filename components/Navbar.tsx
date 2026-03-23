@@ -26,7 +26,7 @@ const Navbar: React.FC = () => {
   
   const { user, logout, openAuthModal, toggleUserMode } = useAuth();
   const { data: session } = useSession();
-  const { pendingUpdate, permissionDenied, confirmUpdate, cancelUpdate } = useLocation(session);
+  const { pendingUpdate, permissionDenied, confirmUpdate, cancelUpdate, retryLocation } = useLocation(session);
   const { push } = useRouter();
   const pathname = usePathname();
 
@@ -95,11 +95,7 @@ const Navbar: React.FC = () => {
                 <LocationBanner 
                     type="permission"
                     message="Location access is denied. Please enable location services for better experience."
-                    onConfirm={() => {
-                        // Attempt to request permission again by reloading or guiding user
-                        // Navigator.permissions API is read-only mostly, so we can just alert or guide
-                        alert("Please enable location access in your browser settings.");
-                    }}
+                    onConfirm={retryLocation}
                     onDismiss={() => {
                          // Optional: Allow dismissing permission warning for this session
                     }}

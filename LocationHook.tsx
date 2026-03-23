@@ -33,6 +33,51 @@ const useLocation = (session: any) => {
         return R * c; // Distance in km
     };
 
+    const retryLocation = async () => {
+        if (!backendAccess) return Promise.reject(new Error("No backend access"));
+
+        return new Promise<void>((resolve, reject) => {
+            if (!navigator.geolocation) {
+                const err = new Error('Geolocation is not supported by your browser');
+                setError(err.message);
+                reject(err);
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    const { latitude, longitude, accuracy } = position.coords;
+                    const newLocation = { latitude, longitude, accuracy };
+                    const locationString = `${latitude},${longitude},${accuracy.toFixed(2)}`;
+                    
+                    try {
+                        // We attempt to send to server. It may respond but we update it manually anyway
+                        await setLocation(backendAccess, locationString, { update: 'true' });
+                        localStorage.setItem('user_location', JSON.stringify(newLocation));
+                        setLocationState(newLocation);
+                        setPermissionDenied(false);
+                        window.location.reload();
+                        resolve();
+                    } catch (e) {
+                        console.error("Failed to update location explicitly", e);
+                        reject(e);
+                    }
+                },
+                (err) => {
+                    // Ignore timeout errors during auto-retry, but handle denied permissions
+                    if (err.code === 1) { // PERMISSION_DENIED
+                        setPermissionDenied(true);
+                        alert("Please enable location access in your device/browser settings. If already enabled, please check your site permissions.");
+                    } else {
+                        console.warn("Geolocation warning:", err.message);
+                    }
+                    reject(err);
+                },
+                { enableHighAccuracy: true, timeout: 30000, maximumAge: 60000 }
+            );
+        });
+    };
+
     // 1. Initial Sync: Fetch server location to set baseline
     useEffect(() => {
         if (!backendAccess) return;
@@ -47,8 +92,11 @@ const useLocation = (session: any) => {
                     };
                     localStorage.setItem('user_location', JSON.stringify(locData));
                 }
-            } catch (err) {
+            } catch (err: any) {
                 console.error("Failed to sync initial location", err);
+                if (err.message && err.message.includes("Location not set.")) {
+                    retryLocation().catch(e => console.error("Auto retry location failed", e));
+                }
             }
         };
         syncServerLocation();
@@ -147,13 +195,15 @@ const useLocation = (session: any) => {
         setPendingUpdate(null);
     };
 
+
     return { 
         location, 
         error, 
         pendingUpdate, 
         permissionDenied,
         confirmUpdate,
-        cancelUpdate
+        cancelUpdate,
+        retryLocation
     };
 };
 
