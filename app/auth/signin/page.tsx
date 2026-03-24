@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { signIn } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import { LogIn } from 'lucide-react';
 import AuthModal from '@/components/AuthModal';
 
@@ -10,14 +10,16 @@ import AuthModal from '@/components/AuthModal';
 function SignInContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { status } = useSession();
   const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
   const [isAuthModalOpen, setIsAuthModalOpen] = React.useState(true);
 
-  // If user is already authenticated, redirect to callback URL
   useEffect(() => {
-    // The AuthModal component will handle the authentication
-    // and redirect using the callbackUrl
-  }, []);
+    if (status === 'authenticated') {
+      setIsAuthModalOpen(false);
+      router.push(callbackUrl);
+    }
+  }, [status, callbackUrl, router]);
 
   const handleAuthClose = () => {
     setIsAuthModalOpen(false);

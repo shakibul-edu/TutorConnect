@@ -15,6 +15,7 @@ interface AuthContextType {
   openAuthModal: () => void;
   closeAuthModal: () => void;
   toggleUserMode: () => void;
+  isAuthModalOpen: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -36,6 +37,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Sync session with local user state
   React.useEffect(() => {
     if (status === 'authenticated' && session?.user) {
+      setIsModalOpen(false);
      
       
       // Map NextAuth session to app User type
@@ -103,7 +105,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       logout, 
       openAuthModal: () => setIsModalOpen(true),
       closeAuthModal: () => setIsModalOpen(false),
-      toggleUserMode
+      toggleUserMode,
+      isAuthModalOpen: isModalOpen
     }}>
       {children}
       <AuthModal 

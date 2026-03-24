@@ -3,14 +3,16 @@
 import Script from 'next/script';
 import { signIn, useSession } from 'next-auth/react';
 import { useEffect, useState, useRef } from 'react';
+import { useAuth } from '../lib/auth';
 
 const GoogleOneTap = () => {
   const { status, update } = useSession();
+  const { isAuthModalOpen } = useAuth();
   const [scriptLoaded, setScriptLoaded] = useState(false);
   const initRef = useRef(false);
 
   useEffect(() => {
-    if (status === 'unauthenticated' && scriptLoaded) {
+    if (status === 'unauthenticated' && scriptLoaded && !isAuthModalOpen) {
       const clientId = '974128074220-a024bn1um7ieopfn95p63p8h1ph40tpf.apps.googleusercontent.com';
       const { google } = window as any;
 
@@ -59,7 +61,17 @@ const GoogleOneTap = () => {
         initRef.current = false;
       };
     }
-  }, [status, scriptLoaded, update]);
+  }, [status, scriptLoaded, isAuthModalOpen, update]);
+
+  useEffect(() => {
+    if (!scriptLoaded || !isAuthModalOpen) return;
+
+    const { google } = window as any;
+    if (google?.accounts?.id?.cancel) {
+      google.accounts.id.cancel();
+      initRef.current = false;
+    }
+  }, [scriptLoaded, isAuthModalOpen]);
 
   if (status !== 'unauthenticated') {
     return null;
