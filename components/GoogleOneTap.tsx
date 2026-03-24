@@ -2,12 +2,10 @@
 
 import Script from 'next/script';
 import { signIn, useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
 
 const GoogleOneTap = () => {
-  const { status } = useSession();
-  const router = useRouter();
+  const { status, update } = useSession();
   const [scriptLoaded, setScriptLoaded] = useState(false);
   const initRef = useRef(false);
 
@@ -34,8 +32,8 @@ const GoogleOneTap = () => {
               });
               console.log('📨 SignIn result:', result);
               if (result?.ok) {
-                console.log('✅ Sign-in successful, redirecting to dashboard');
-                router.push('/dashboard');
+                // Keep the user on the same page and force a session refresh.
+                await update();
               } else {
                 console.error('❌ Google One Tap: Sign in failed', result?.error);
               }
@@ -61,7 +59,7 @@ const GoogleOneTap = () => {
         initRef.current = false;
       };
     }
-  }, [status, scriptLoaded, router]);
+  }, [status, scriptLoaded, update]);
 
   if (status !== 'unauthenticated') {
     return null;
