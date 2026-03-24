@@ -10,6 +10,7 @@ import GoogleOneTap from '../components/GoogleOneTap';
 import SessionProviderWrapper from '../lib/SessionProvider';
 import { LanguageProvider } from '../contexts/LanguageContext';
 import { Analytics } from "@vercel/analytics/next"
+import FloatingChat from '../components/chat/FloatingChat';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -79,6 +80,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <main className="flex-grow">
                   {children}
                 </main>
+                <FloatingChat />
                 <Footer />
                 <Analytics />
               </div>

@@ -255,6 +255,7 @@ export interface ContactRequest {
   teacher_phone?: string;
   teacher_email?: string;
   student_email?: string;
+  conversation_key?: string;
 }
 
 export interface JobPostAvailabilityPayload {
