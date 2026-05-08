@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, Suspense } from 'react';
 import { useSession, signIn } from 'next-auth/react';
 import { User } from '../types';
 import AuthModal from '../components/AuthModal';
@@ -121,11 +121,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isAuthModalOpen: isModalOpen
     }}>
       {children}
-      <AuthModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        onLogin={login} 
-      />
+      <Suspense fallback={null}>
+        <AuthModal 
+          isOpen={isModalOpen} 
+          onClose={() => setIsModalOpen(false)} 
+          onLogin={login} 
+        />
+      </Suspense>
     </AuthContext.Provider>
   );
 };
