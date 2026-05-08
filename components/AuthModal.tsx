@@ -2,7 +2,9 @@
 
 import React from 'react';
 import { signIn, useSession } from 'next-auth/react';
+import { useSearchParams } from 'next/navigation';
 import { User } from '../types';
+import { toast } from '@/lib/toast';
 
 
 interface AuthModalProps {
@@ -14,20 +16,69 @@ interface AuthModalProps {
 
 const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, callbackUrl }) => {
   const { data: session } = useSession();
+  const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  // Check for error in URL on component mount
+  React.useEffect(() => {
+    const errorParam = searchParams.get('error');
+    if (errorParam) {
+      let errorMessage = 'Authentication failed. Please try again.';
+      
+      if (errorParam.includes('banned') || errorParam.includes('Banned')) {
+        errorMessage = 'This account is banned. Please contact support for assistance.';
+      }
+      
+      console.log('🔍 Error from URL:', errorParam);
+      setError(errorMessage);
+      toast.error(errorMessage);
+    }
+  }, [searchParams]);
 
   if (!isOpen) return null;
 
+  const showError = (message: string, errorCode?: string) => {
+    console.error(`❌ ${errorCode ? `[${errorCode}] ` : ''}${message}`);
+    setError(message);
+    // Show toast as backup notification
+    try {
+      toast.error(message);
+    } catch (e) {
+      console.warn('⚠️ Toast failed, but error is displayed in modal');
+    }
+  };
+
   const handleGoogleLogin = async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const redirectUrl = callbackUrl || '/dashboard';
-      await signIn('google', { redirect: true, callbackUrl: redirectUrl });
-      // The session will be updated automatically by NextAuth, triggering the AuthProvider sync
-      onClose?.();
+      const result = await signIn('google', { redirect: false, callbackUrl: redirectUrl });
+
+      if (result?.ok) {
+        onClose?.();
+      } else if (result?.error === 'Callback') {
+        showError('Authentication failed. Please try again.', 'Callback');
+      } else if (result?.error === 'OAuthSignin' || result?.error === 'OAuthCallback') {
+        showError('Failed to connect with Google. Please try again.', result?.error);
+      } else if (result?.error === 'AccessDenied') {
+        showError('Access was denied. Please check your account status.', 'AccessDenied');
+      } else if (result?.error) {
+        // Generic error with provided error code
+        showError(`Authentication failed: ${result.error}`, result.error);
+      } else if (result?.ok === false) {
+        // This happens when signIn callback returns false (likely banned user)
+        showError('This account is banned. Please contact support for assistance.', 'SignInRejected');
+      } else {
+        // Unknown failure
+        showError('Failed to sign in. Please try again.', 'UnknownError');
+      }
     } catch (error) {
-      console.error('Google login error:', error);
-      setIsLoading(false);
+      console.error('💥 Google login exception:', error);
+      showError('An unexpected error occurred. Please try again.', 'Exception');
+    } finally {
+        setIsLoading(false);
     }
   };
 
@@ -39,6 +90,18 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, callbac
             <h2 className="text-2xl font-bold text-gray-900">Welcome to TutorConnect</h2>
             <p className="text-gray-500 mt-2">Sign in to find jobs or hire tutors</p>
           </div>
+
+          {error && (
+            <div className="mb-6 flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <svg className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.1"/>
+                <path d="M12 8v4m0 4v.01M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+              <div className="flex-1">
+                <p className="text-sm text-red-800 font-medium">{error}</p>
+              </div>
+            </div>
+          )}
 
           <button
             onClick={handleGoogleLogin}

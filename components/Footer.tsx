@@ -8,6 +8,11 @@ import Logo from './Logo';
 
 const Footer: React.FC = () => {
   const { t } = useLanguage();
+  const pathname = usePathname();
+
+  if (pathname.startsWith('chat/')) {
+    return null;
+  }
 
   return (
     <footer className="bg-slate-900 text-white pt-20 pb-10 relative overflow-hidden">
