@@ -422,35 +422,38 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     }
 
     const content = newMessage.trim();
-    const tempId = `tmp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-
-    const optimisticMessage: ChatMessage = {
-      $id: tempId,
-      $collectionId: APPWRITE_MESSAGES_COL_ID,
-      $databaseId: APPWRITE_DB_ID,
-      $createdAt: new Date().toISOString(),
-      $updatedAt: new Date().toISOString(),
-      $sequence: 0,
-      $permissions: [],
-      conversationKey,
-      senderId: String(user.id),
-      senderType,
-      senderName: user.username || user.email || 'You',
-      content,
-      read: true,
-      createdAt: new Date().toISOString(),
-      clientTempId: tempId,
-      sendStatus: 'sending',
-    };
-
-    setMessages((prev) => [...prev, optimisticMessage]);
-    setNewMessage('');
+    let tempId: string | null = null;
 
     try {
       const isAppwriteReady = await ensureAppwriteSession();
       if (!isAppwriteReady) {
-        throw new Error('Appwrite session is not ready');
+        window.alert('Chat session is still connecting. Please try again in a moment.');
+        return;
       }
+
+      tempId = `tmp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+      const optimisticMessage: ChatMessage = {
+        $id: tempId,
+        $collectionId: APPWRITE_MESSAGES_COL_ID,
+        $databaseId: APPWRITE_DB_ID,
+        $createdAt: new Date().toISOString(),
+        $updatedAt: new Date().toISOString(),
+        $sequence: 0,
+        $permissions: [],
+        conversationKey,
+        senderId: String(user.id),
+        senderType,
+        senderName: user.username || user.email || 'You',
+        content,
+        read: true,
+        createdAt: new Date().toISOString(),
+        clientTempId: tempId,
+        sendStatus: 'sending',
+      };
+
+      setMessages((prev) => [...prev, optimisticMessage]);
+      setNewMessage('');
 
       // Use server-side message creation to ensure proper permissions
       const response = await fetch('/api/appwrite/message', {
@@ -508,6 +511,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       );
     } catch (error) {
       const errorText = error instanceof Error ? error.message : 'Failed to send message';
+      if (!tempId) {
+        window.alert('Unable to send the message right now. Please try again.');
+        return;
+      }
+
       setMessages((prev) =>
         prev.map((msg) =>
           msg.clientTempId === tempId
