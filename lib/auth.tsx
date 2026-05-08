@@ -5,7 +5,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useSession, signIn } from 'next-auth/react';
 import { User } from '../types';
 import AuthModal from '../components/AuthModal';
-import { useRouter } from './router';
+import { usePathname, useRouter } from './router';
 import { setUnauthorizedCallback } from '../FetchApi';
 
 interface AuthContextType {
@@ -25,6 +25,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { push } = useRouter();
+  const pathname = usePathname();
 
   // Set up 401 handler to trigger re-authentication
   useEffect(() => {
@@ -36,9 +37,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Sync session with local user state
   React.useEffect(() => {
+    // Check for banned state in session
     if (status === 'authenticated' && session?.user) {
+      const isBanned = Boolean((session as any).banned || (session as any).is_baned || (session as any).banned_error);
+      
+      if (isBanned) {
+        if (pathname !== 'appeal') {
+          push('appeal');
+        }
+        setIsModalOpen(false);
+        setUser(null);
+        return;
+      }
+      
       setIsModalOpen(false);
-     
       
       // Map NextAuth session to app User type
       // Note: In a real app, you might fetch additional user details from your API here
@@ -71,7 +83,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Session expired or refresh failed, triggering re-authentication...');
       signIn('google');
     }
-  }, [session, status]);
+  }, [session, status, pathname, push]);
 
   const login = (userData: User) => {
     // Legacy support: manual login is now handled via NextAuth signIn

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../lib/auth';
 import { MessageCircle, X, Maximize2, Minimize2, ArrowLeft } from 'lucide-react';
 import { ContactRequest } from '../../types';
@@ -8,11 +8,12 @@ import { getContactRequests } from '../../services/backend';
 import { useSession } from 'next-auth/react';
 import ChatWindow from './ChatWindow';
 import Link from 'next/link';
-import { appwriteDatabases, APPWRITE_DB_ID, APPWRITE_MESSAGES_COL_ID } from '../../lib/appwrite';
-import { Query } from 'appwrite';
+import { usePathname } from '../../lib/router';
+import { APPWRITE_DB_ID, APPWRITE_MESSAGES_COL_ID, appwriteClient, ensureAppwriteSession } from '../../lib/appwrite';
 
 const FloatingChat: React.FC = () => {
   const { user } = useAuth();
+  const pathname = usePathname();
   // @ts-ignore
   const { data: session } = useSession();
   const [isOpen, setIsOpen] = useState(false);
@@ -21,6 +22,16 @@ const FloatingChat: React.FC = () => {
   const [selectedConversation, setSelectedConversation] = useState<ContactRequest | null>(null);
   const [loading, setLoading] = useState(false);
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  const isOpenRef = useRef(isOpen);
+  const selectedConversationKeyRef = useRef<string | null>(selectedConversation?.conversation_key || null);
+
+  useEffect(() => {
+    isOpenRef.current = isOpen;
+  }, [isOpen]);
+
+  useEffect(() => {
+    selectedConversationKeyRef.current = selectedConversation?.conversation_key || null;
+  }, [selectedConversation]);
 
   // @ts-ignore
   const token = (session as any)?.backendAccess;
@@ -40,21 +51,22 @@ const FloatingChat: React.FC = () => {
         );
         setActiveConversations(active);
 
-        // Fetch unread counts from Appwrite for each conversation
+        // Fetch unread counts from server for each conversation
         const counts: Record<string, number> = {};
         for (const req of active) {
             if (req.conversation_key) {
                 try {
-                    const res = await appwriteDatabases.listDocuments(
-                        APPWRITE_DB_ID,
-                        APPWRITE_MESSAGES_COL_ID,
-                        [
-                            Query.equal('conversationKey', req.conversation_key),
-                            Query.equal('read', false),
-                            Query.notEqual('senderId', user.id) // Messages NOT from me
-                        ]
-                    );
-                    counts[req.conversation_key] = res.total;
+                    const res = await fetch('/api/appwrite/unread-count', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      credentials: 'include',
+                      body: JSON.stringify({ conversationKey: req.conversation_key }),
+                    });
+
+                    if (res.ok) {
+                      const data = (await res.json()) as { unreadCount: number };
+                      counts[req.conversation_key] = data.unreadCount;
+                    }
                 } catch (e) {
                     console.error("Failed to fetch unread count", e);
                 }
@@ -72,6 +84,100 @@ const FloatingChat: React.FC = () => {
     fetchConversations();
   }, [token, user]);
 
+  useEffect(() => {
+    if (!user || activeConversations.length === 0) return;
+
+    let unsubscribe = () => {};
+    let isCancelled = false;
+
+    const conversationKeys = new Set(
+      activeConversations
+        .map((conv) => conv.conversation_key)
+        .filter((key): key is string => Boolean(key))
+    );
+
+    const subscribeToUnreadUpdates = async () => {
+      const ready = await ensureAppwriteSession();
+      if (!ready || isCancelled) return;
+
+      unsubscribe = appwriteClient.subscribe(
+        `databases.${APPWRITE_DB_ID}.collections.${APPWRITE_MESSAGES_COL_ID}.documents`,
+        (event) => {
+          if (!event.events.includes('databases.*.collections.*.documents.*.create')) {
+            return;
+          }
+
+          const payload = event.payload as {
+            conversationKey?: string;
+            senderId?: string | number;
+          };
+
+          const key = String(payload.conversationKey || '');
+          if (!key || !conversationKeys.has(key)) return;
+
+          const senderId = String(payload.senderId || '');
+          const isMine = senderId === String(user.id);
+          if (isMine) return;
+
+          const isActiveOpenConversation = Boolean(
+            isOpenRef.current &&
+            selectedConversationKeyRef.current &&
+            selectedConversationKeyRef.current === key
+          );
+
+          if (isActiveOpenConversation) {
+            void markConversationRead(key);
+            setUnreadCounts((prev) => ({ ...prev, [key]: 0 }));
+            return;
+          }
+
+          setUnreadCounts((prev) => ({ ...prev, [key]: (prev[key] || 0) + 1 }));
+        }
+      );
+    };
+
+    subscribeToUnreadUpdates();
+
+    return () => {
+      isCancelled = true;
+      unsubscribe();
+    };
+  }, [activeConversations, user]);
+
+  const formatTeacherLabel = (conv: ContactRequest) => {
+    const teacherName = conv.teacher_name?.trim();
+    if (teacherName) {
+      return `${teacherName} (#${conv.teacher})`;
+    }
+    const emailName = conv.teacher_email?.split('@')[0]?.replace(/[._-]+/g, ' ')?.trim();
+    if (emailName) {
+      return `${emailName} (#${conv.teacher})`;
+    }
+    return `Teacher (#${conv.teacher})`;
+  };
+
+  const markConversationRead = async (conversationKey: string) => {
+    try {
+      await fetch('/api/appwrite/mark-read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ conversationKey }),
+      });
+    } catch (error) {
+      console.error('Failed to mark conversation as read', error);
+    }
+  };
+
+  const handleConversationOpen = async (conv: ContactRequest) => {
+    setSelectedConversation(conv);
+    if (conv.conversation_key) {
+      setUnreadCounts((prev) => ({ ...prev, [conv.conversation_key!]: 0 }));
+      await markConversationRead(conv.conversation_key);
+    }
+  };
+
+  if (pathname.startsWith('chat/')) return null;
   if (!user) return null;
 
   const totalUnread = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
@@ -132,7 +238,15 @@ const FloatingChat: React.FC = () => {
               <ChatWindow
                 conversationKey={selectedConversation.conversation_key!}
                 senderType={user.email === selectedConversation.teacher_email ? 'teacher' : 'student'}
-                otherPersonName={user.email === selectedConversation.teacher_email ? selectedConversation.student_name : `Teacher #${selectedConversation.teacher}`}
+                otherPersonName={user.email === selectedConversation.teacher_email ? selectedConversation.student_name : formatTeacherLabel(selectedConversation)}
+                otherUserEmail={user.email === selectedConversation.teacher_email ? selectedConversation.student_email : selectedConversation.teacher_email}
+                contactRequestId={selectedConversation.id}
+                onMarkedRead={() => {
+                  const key = selectedConversation.conversation_key;
+                  if (key) {
+                    setUnreadCounts((prev) => ({ ...prev, [key]: 0 }));
+                  }
+                }}
               />
             ) : (
               // Conversation List
@@ -146,12 +260,12 @@ const FloatingChat: React.FC = () => {
                 ) : (
                   <ul className="divide-y divide-gray-100">
                     {activeConversations.map((conv) => {
-                      const otherName = user.email === conv.teacher_email ? conv.student_name : `Teacher #${conv.teacher}`;
+                      const otherName = user.email === conv.teacher_email ? conv.student_name : formatTeacherLabel(conv);
                       const unread = unreadCounts[conv.conversation_key!] || 0;
                       return (
                         <li
                           key={conv.id}
-                          onClick={() => setSelectedConversation(conv)}
+                          onClick={() => handleConversationOpen(conv)}
                           className="p-4 hover:bg-indigo-50 cursor-pointer transition-colors flex items-center justify-between"
                         >
                           <div className="flex items-center gap-3">

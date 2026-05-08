@@ -47,6 +47,9 @@ const nextConfig = {
   },
   async headers() {
     const backendUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.BASE_URL || 'http://localhost:8000';
+    const appwriteEndpoint = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || 'https://fra.cloud.appwrite.io/v1';
+    const appwriteOrigin = new URL(appwriteEndpoint).origin;
+    const appwriteWsOrigin = appwriteOrigin.replace(/^http/, 'ws');
     
     return [
       {
@@ -70,7 +73,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com https://www.gstatic.com",
               `img-src 'self' data: https: ${backendUrl}`,
               "font-src 'self' data: https://fonts.gstatic.com",
-              `connect-src 'self' https://accounts.google.com https://www.googleapis.com https://www.gstatic.com ws: http://localhost:3000 http://127.0.0.1:3000 ${backendUrl}`,
+              `connect-src 'self' https://accounts.google.com https://www.googleapis.com https://www.gstatic.com ws: wss: http://localhost:3000 http://127.0.0.1:3000 ${backendUrl} ${appwriteOrigin} ${appwriteWsOrigin}`,
               "frame-src 'self' https://accounts.google.com",
               "frame-ancestors 'self'",
               "form-action 'self' https://accounts.google.com",

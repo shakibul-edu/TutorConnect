@@ -55,6 +55,7 @@ declare module "next-auth" {
     user_id?: number;
     is_teacher?: boolean;
     banned?: boolean;
+    is_baned?: boolean;
   }
 }
 
@@ -66,6 +67,8 @@ declare module "next-auth/jwt" {
     user_id?: number;
     is_teacher?: boolean;
     banned?: boolean;
+    is_baned?: boolean;
+    banned_error?: string;
   }
 }
 
@@ -77,6 +80,8 @@ declare module "next-auth" {
     user_id?: number;
     is_teacher?: boolean;
     banned?: boolean;
+    is_baned?: boolean;
+    banned_error?: string;
   }
 } 
 
@@ -138,12 +143,8 @@ export const authOptions: NextAuthOptions = {
               const backendData = await backendRes.json();
               console.log('✅ Backend tokens retrieved from /auth/google/', backendData);
               
-              // Check if user is banned
-              if (backendData.banned) {
-                console.error('❌ User is banned, rejecting login');
-                return null;
-              }
-              
+              // IMPORTANT: Return the user object with banned flag set
+              // The signIn callback will handle the rejection
               return {
                 id: payload.sub,
                 email: payload.email,
@@ -154,13 +155,18 @@ export const authOptions: NextAuthOptions = {
                 backendRefresh: backendData.refresh,
                 user_id: backendData.user.id,
                 is_teacher: backendData.user.is_teacher,
-                banned: backendData.user.banned,
+                banned: backendData.user.banned || backendData.user?.banned,
+                is_baned: backendData.user.is_baned ?? backendData.user.banned,
               };
             } else {
               console.error('⚠️ Backend token exchange failed, proceeding without backend tokens');
             }
           } catch (backendError) {
             console.error('⚠️ Backend request failed:', backendError);
+            // Re-throw if it's a banned error
+            if (backendError instanceof Error && backendError.message === 'Banned') {
+              throw backendError;
+            }
           }
 
           // Return user even if backend fails
@@ -182,6 +188,12 @@ export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" as const },
 
   callbacks: {
+    async signIn({ user, account }) {
+      // All banned check logic happens in jwt callback now
+      // This ensures we have all info (backend data) before making decision
+      return true;
+    },
+
     async jwt({ token, user, account }) {
       const backendUrl = process.env.BASE_URL || 'http://127.0.0.1:8000';
 
@@ -193,11 +205,13 @@ export const authOptions: NextAuthOptions = {
         token.user_id = user.user_id;
         token.is_teacher = user.is_teacher;
         token.banned = user.banned;
+        token.is_baned = user.is_baned ?? user.banned;
         
-        // Check if user is banned
+        // If user is banned, set error flag but don't prevent token creation
+        // This allows us to communicate the error to the client
         if (user.banned) {
-          console.error('❌ User is banned, rejecting login');
-          throw new Error('This account is banned.');
+          token.banned_error = 'This account is banned. Please contact support for assistance.';
+          console.error('❌ User is banned:', user.email);
         }
       }
 
@@ -219,21 +233,26 @@ export const authOptions: NextAuthOptions = {
           if (backendRes.ok) {
             const backendData = await backendRes.json();
             console.log('✅ Backend tokens retrieved via OAuth /auth/google/', backendData);
+            
             token.backendAccess = backendData.access;
             token.backendRefresh = backendData.refresh;
-            token.user_id = backendData.user_id;
-            token.is_teacher = backendData.is_teacher;
-            token.banned = backendData.banned;
-            
-            // Verify we got the custom fields
-            if (!backendData.user_id) {
-              console.error('⚠️ Backend did not return user_id! Check /auth/google/ endpoint');
+            token.user_id = backendData.user?.id ?? backendData.user_id;
+            token.is_teacher = backendData.user?.is_teacher ?? backendData.is_teacher;
+            token.banned = backendData.user?.banned ?? backendData.banned;
+            token.is_baned = backendData.user?.is_baned ?? backendData.is_baned ?? backendData.user?.banned ?? backendData.banned;
+
+            // Keep token/session for banned users so they can submit appeal requests.
+            if (backendData.user?.banned || backendData.banned) {
+              console.error('❌ User is banned:', backendData.user?.email || backendData.email);
+              token.banned = true;
+              token.is_baned = true;
+              token.banned_error = 'Your account is banned. Please submit an appeal request.';
+              return token;
             }
             
-            // Check if user is banned
-            if (backendData.banned) {
-              console.error('❌ User is banned, rejecting login');
-              throw new Error('This account is banned.');
+            // Verify we got the custom fields
+            if (!(backendData.user?.id ?? backendData.user_id)) {
+              console.error('⚠️ Backend did not return user_id! Check /auth/google/ endpoint');
             }
           } else {
             const errorText = await backendRes.text();
@@ -253,11 +272,13 @@ export const authOptions: NextAuthOptions = {
           token.backendRefresh = refreshed.refresh || token.backendRefresh;
           token.is_teacher = refreshed.is_teacher ?? token.is_teacher;
           token.banned = refreshed.banned ?? token.banned;
+          token.is_baned = refreshed.is_baned ?? refreshed.banned ?? token.is_baned;
           
-          // Check if user became banned during refresh
+          // Keep token for banned users so appeal submission remains possible.
           if (refreshed.banned) {
-            console.error('❌ User is banned, forcing re-login');
-            return null;
+            token.banned = true;
+            token.is_baned = true;
+            token.banned_error = 'Your account is banned. Please submit an appeal request.';
           }
         } else {
           // Force re-login if backend token refresh fails
@@ -276,12 +297,15 @@ export const authOptions: NextAuthOptions = {
       session.user_id = token.user_id;
       session.is_teacher = token.is_teacher;
       session.banned = token.banned;
+      session.is_baned = token.is_baned ?? token.banned;
+      session.banned_error = token.banned_error;
       return session;
     },
   },
 
   pages: {
     signIn: '/',
+    error: '/auth/signin',
   },
 
   // CRITICAL: Must have a secret or NextAuth breaks completely

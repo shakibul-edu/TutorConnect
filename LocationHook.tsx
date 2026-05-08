@@ -19,6 +19,7 @@ const useLocation = (session: any) => {
     const [permissionDenied, setPermissionDenied] = useState(false);
 
     const backendAccess = (session as any)?.backendAccess;
+    const isBanned = (session as any)?.banned_error || (session as any)?.banned;
 
     // Helper to calculate distance in KM
     const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -80,7 +81,10 @@ const useLocation = (session: any) => {
 
     // 1. Initial Sync: Fetch server location to set baseline
     useEffect(() => {
-        if (!backendAccess) return;
+        if (!backendAccess || isBanned) {
+            console.warn('⏭️ Skipping location sync - backendAccess:', !!backendAccess, 'isBanned:', isBanned);
+            return;
+        }
         const syncServerLocation = async () => {
             try {
                 const serverLoc = await getLocation(backendAccess);
