@@ -1,35 +1,20 @@
-import crypto from 'crypto';
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../auth/[...nextauth]/route';
-
-const APPWRITE_ENDPOINT = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || 'https://fra.cloud.appwrite.io/v1';
-const APPWRITE_PROJECT_ID = process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID;
-const APPWRITE_API_KEY = process.env.APPWRITE_API_KEY;
-const APPWRITE_DB_ID = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || '69c24a79002d55f14064';
-const APPWRITE_PRESENCE_COL_ID = process.env.NEXT_PUBLIC_APPWRITE_CHAT_PRESENCE_COLLECTION_ID || 'chat-presence';
-
-const buildHeaders = () => ({
-  'Content-Type': 'application/json',
-  'X-Appwrite-Project': APPWRITE_PROJECT_ID as string,
-  'X-Appwrite-Key': APPWRITE_API_KEY as string,
-});
-
-const buildStableUserId = (rawIdentity: string) => {
-  const digest = crypto.createHash('sha256').update(rawIdentity).digest('hex').slice(0, 28);
-  return `tc_${digest}`;
-};
-
-const resolveAppwriteIdentity = (session: any): string => {
-  const email = String(session?.user?.email || '').trim().toLowerCase();
-  if (email) return email;
-  const backendUserId = String(session?.user_id || '').trim();
-  if (backendUserId) return backendUserId;
-  return '';
-};
+import { Databases } from 'node-appwrite';
+import {
+  createAdminClient,
+  buildStableUserId,
+  resolveIdentity,
+  DB_ID,
+  PRESENCE_COL_ID,
+} from '@/lib/appwrite-server';
 
 export async function POST() {
-  if (!APPWRITE_PROJECT_ID || !APPWRITE_API_KEY) {
+  const projectId = process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID;
+  const apiKey = process.env.APPWRITE_API_KEY;
+
+  if (!projectId || !apiKey) {
     return NextResponse.json({ error: 'Missing Appwrite configuration' }, { status: 500 });
   }
 
@@ -38,7 +23,7 @@ export async function POST() {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   }
 
-  const rawIdentity = resolveAppwriteIdentity(session);
+  const rawIdentity = resolveIdentity(session as unknown as Record<string, unknown>);
   if (!rawIdentity) {
     return NextResponse.json({ error: 'Missing user identity' }, { status: 400 });
   }
@@ -47,64 +32,39 @@ export async function POST() {
   const now = new Date().toISOString();
 
   try {
-    const updateRes = await fetch(
-      `${APPWRITE_ENDPOINT}/databases/${APPWRITE_DB_ID}/collections/${APPWRITE_PRESENCE_COL_ID}/documents/${appwriteUserId}`,
-      {
-        method: 'PATCH',
-        headers: buildHeaders(),
-        body: JSON.stringify({ data: { userId: appwriteUserId, lastSeen: now } }),
-      }
-    );
+    const { client } = createAdminClient();
+    const db = new Databases(client);
 
-    if (updateRes.ok) {
+    try {
+      await db.updateDocument(DB_ID, PRESENCE_COL_ID, appwriteUserId, {
+        userId: appwriteUserId,
+        lastSeen: now,
+      });
       return NextResponse.json({ ok: true, lastSeen: now });
-    }
+    } catch (updateErr: unknown) {
+      const code = (updateErr as { code?: number })?.code;
+      if (code !== 404) throw updateErr;
 
-    if (updateRes.status !== 404) {
-      const errText = await updateRes.text();
-      throw new Error(`Failed to update presence (${updateRes.status}): ${errText}`);
-    }
-
-    const createRes = await fetch(
-      `${APPWRITE_ENDPOINT}/databases/${APPWRITE_DB_ID}/collections/${APPWRITE_PRESENCE_COL_ID}/documents`,
-      {
-        method: 'POST',
-        headers: buildHeaders(),
-        body: JSON.stringify({
-          documentId: appwriteUserId,
-          data: {
+      // Document doesn't exist yet — create it
+      try {
+        await db.createDocument(DB_ID, PRESENCE_COL_ID, appwriteUserId, {
+          userId: appwriteUserId,
+          lastSeen: now,
+        });
+        return NextResponse.json({ ok: true, lastSeen: now });
+      } catch (createErr: unknown) {
+        const createCode = (createErr as { code?: number })?.code;
+        if (createCode === 409) {
+          // Race condition: another request created it, retry the update
+          await db.updateDocument(DB_ID, PRESENCE_COL_ID, appwriteUserId, {
             userId: appwriteUserId,
             lastSeen: now,
-          },
-        }),
-      }
-    );
-
-    if (!createRes.ok) {
-      if (createRes.status === 409) {
-        // Another in-flight heartbeat already created this document; update it and continue.
-        const retryUpdateRes = await fetch(
-          `${APPWRITE_ENDPOINT}/databases/${APPWRITE_DB_ID}/collections/${APPWRITE_PRESENCE_COL_ID}/documents/${appwriteUserId}`,
-          {
-            method: 'PATCH',
-            headers: buildHeaders(),
-            body: JSON.stringify({ data: { userId: appwriteUserId, lastSeen: now } }),
-          }
-        );
-
-        if (retryUpdateRes.ok) {
+          });
           return NextResponse.json({ ok: true, lastSeen: now });
         }
-
-        const retryText = await retryUpdateRes.text();
-        throw new Error(`Failed to update presence after conflict (${retryUpdateRes.status}): ${retryText}`);
+        throw createErr;
       }
-
-      const createText = await createRes.text();
-      throw new Error(`Failed to create presence (${createRes.status}): ${createText}`);
     }
-
-    return NextResponse.json({ ok: true, lastSeen: now });
   } catch (error) {
     console.error('Failed to update chat presence', error);
     return NextResponse.json({ error: 'Failed to update chat presence' }, { status: 500 });
