@@ -11,6 +11,12 @@ const APPWRITE_DB_ID = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || '69c24a79
 const APPWRITE_MESSAGES_COL_ID = process.env.NEXT_PUBLIC_APPWRITE_MESSAGES_COLLECTION_ID || 'messages';
 const APPWRITE_CHAT_BLOCKS_COL_ID = process.env.NEXT_PUBLIC_APPWRITE_CHAT_BLOCKS_COLLECTION_ID || 'chat_blocks';
 
+/** Deterministic password derived from userId — Appwrite REST POST /users requires a password field. */
+const buildUserPassword = (userId: string): string => {
+  const secret = APPWRITE_API_KEY || 'fallback-secret';
+  return crypto.createHmac('sha256', secret).update(userId).digest('base64').slice(0, 48);
+};
+
 const buildHeaders = () => ({
   'Content-Type': 'application/json',
   'X-Appwrite-Project': APPWRITE_PROJECT_ID as string,
@@ -85,12 +91,15 @@ export async function POST(request: Request) {
     });
 
     if (!userRes.ok && userRes.status === 404) {
+      // Appwrite REST POST /users requires a password field
+      const password = buildUserPassword(appwriteUserId);
       await fetch(`${APPWRITE_ENDPOINT}/users`, {
         method: 'POST',
         headers: buildHeaders(),
         body: JSON.stringify({
           userId: appwriteUserId,
           name: session.user.name || 'User',
+          password,
         }),
       });
     }

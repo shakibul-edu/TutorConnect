@@ -11,7 +11,7 @@ export const appwriteDatabases = new Databases(appwriteClient);
 
 export const APPWRITE_DB_ID = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || '69c24a79002d55f14064';
 export const APPWRITE_MESSAGES_COL_ID = process.env.NEXT_PUBLIC_APPWRITE_MESSAGES_COLLECTION_ID || 'messages';
-export const APPWRITE_PRESENCE_COL_ID = process.env.NEXT_PUBLIC_APPWRITE_PRESENCE_COLLECTION_ID || 'chat_presence';
+export const APPWRITE_PRESENCE_COL_ID = process.env.NEXT_PUBLIC_APPWRITE_CHAT_PRESENCE_COLLECTION_ID || 'chat-presence';
 
 let appwriteAuthReady = false;
 let appwriteUserId: string | null = null;
