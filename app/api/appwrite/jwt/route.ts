@@ -7,11 +7,29 @@ const APPWRITE_ENDPOINT = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || 'https://
 const APPWRITE_PROJECT_ID = process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID;
 const APPWRITE_API_KEY = process.env.APPWRITE_API_KEY;
 
+// Log env status once at module load to help diagnose production issues
+if (!APPWRITE_PROJECT_ID) {
+  console.error('[appwrite/jwt] NEXT_PUBLIC_APPWRITE_PROJECT_ID is not set in the environment.');
+}
+if (!APPWRITE_API_KEY) {
+  console.error('[appwrite/jwt] APPWRITE_API_KEY is not set in the environment.');
+}
+
 const buildHeaders = () => ({
   'Content-Type': 'application/json',
   'X-Appwrite-Project': APPWRITE_PROJECT_ID as string,
   'X-Appwrite-Key': APPWRITE_API_KEY as string,
 });
+
+/**
+ * Generate a deterministic password for a given userId.
+ * Appwrite REST `POST /users` requires a `password` field;
+ * we derive one from the userId so it is stable and never needs to be stored.
+ */
+const buildUserPassword = (userId: string): string => {
+  const secret = APPWRITE_API_KEY || 'fallback-secret';
+  return crypto.createHmac('sha256', secret).update(userId).digest('base64').slice(0, 48);
+};
 
 const buildStableUserId = (rawIdentity: string) => {
   const digest = crypto.createHash('sha256').update(rawIdentity).digest('hex').slice(0, 28);
@@ -42,16 +60,22 @@ const ensureUserExists = async (userId: string, name: string) => {
     throw new Error(`Appwrite get user failed (${userRes.status}): ${text}`);
   }
 
+  // User does not exist — create them.
+  // Appwrite REST API requires `password` for `POST /users`.
+  const password = buildUserPassword(userId);
+
   const createRes = await fetch(`${APPWRITE_ENDPOINT}/users`, {
     method: 'POST',
     headers: buildHeaders(),
     body: JSON.stringify({
       userId,
       name,
+      password,
     }),
   });
 
   if (createRes.ok || createRes.status === 409) {
+    // 409 = user already exists (race condition), treat as success
     return true;
   }
 
