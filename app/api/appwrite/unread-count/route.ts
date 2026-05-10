@@ -7,6 +7,7 @@ import {
   buildStableUserId,
   resolveIdentity,
   ensureAppwriteUser,
+  mintUserJWT,
   DB_ID,
   MESSAGES_COL_ID,
 } from '@/lib/appwrite-server';
@@ -41,19 +42,19 @@ export async function POST(request: Request) {
     }
 
     const appwriteUserId = buildStableUserId(rawIdentity);
-    await ensureAppwriteUser(appwriteUserId, (session.user.name as string | undefined) || 'User');
+    const email = (session.user.email as string | undefined) || undefined;
+    await ensureAppwriteUser(appwriteUserId, (session.user.name as string | undefined) || 'User', email);
 
     const senderIdNum = resolveSenderId(session as unknown as Record<string, unknown>);
 
-    const { users, client } = createAdminClient();
+    // Mint a short-lived JWT via token → session → JWT (correct server-side flow)
+    const jwt = await mintUserJWT(appwriteUserId);
 
-    // Mint a short-lived JWT for this user so the query is scoped to their permissions
-    const jwtResponse = await users.createJWT(appwriteUserId);
     const { Client: AppwriteClient, Databases: AppwriteDatabases } = await import('node-appwrite');
     const jwtClient = new AppwriteClient()
       .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || 'https://fra.cloud.appwrite.io/v1')
       .setProject(projectId)
-      .setJWT(jwtResponse.jwt);
+      .setJWT(jwt);
 
     const db = new AppwriteDatabases(jwtClient);
 

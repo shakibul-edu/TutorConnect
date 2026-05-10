@@ -2,10 +2,10 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/route';
 import {
-  createAdminClient,
   buildStableUserId,
   resolveIdentity,
   ensureAppwriteUser,
+  mintUserJWT,
 } from '@/lib/appwrite-server';
 
 export async function GET() {
@@ -40,15 +40,18 @@ export async function GET() {
 
   const userId = buildStableUserId(rawIdentity);
   console.log('[JWT-DEBUG] Stable userId:', userId);
+
   const name = (session.user.name as string | undefined) || 'TutorConnect User';
+  const email = (session.user.email as string | undefined) || undefined;
 
   try {
-    await ensureAppwriteUser(userId, name);
+    // Ensure user exists in Appwrite (creates with email if missing)
+    await ensureAppwriteUser(userId, name, email);
 
-    const { users } = createAdminClient();
-    const jwtResponse = await users.createJWT(userId);
+    // Mint JWT via token → session → JWT (correct server-side flow)
+    const jwt = await mintUserJWT(userId);
 
-    return NextResponse.json({ jwt: jwtResponse.jwt, appwriteUserId: userId });
+    return NextResponse.json({ jwt, appwriteUserId: userId });
   } catch (error) {
     console.error('[JWT-DEBUG] Failed to mint Appwrite JWT — full error:', error);
     console.error('[JWT-DEBUG] Error message:', (error as Error)?.message);
