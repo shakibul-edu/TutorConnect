@@ -75,7 +75,7 @@ export const ensureAppwriteUser = async (
     console.log('[appwrite-server] User not found, creating:', userId);
     try {
       // Pass email for a proper account identity; no password → passwordless/token-based login
-      await users.create(userId, email || undefined, undefined, undefined, name);
+      await users.create(userId, email || undefined, undefined, name);
       console.log('[appwrite-server] User created:', userId);
     } catch (createErr: unknown) {
       // 409 = already exists due to a race condition — safe to ignore
