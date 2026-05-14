@@ -24,6 +24,13 @@ export const BLOCKS_COL_ID =
 
 /** Create a fresh Appwrite server client (with API key scope). */
 export const createAdminClient = () => {
+  if (!APPWRITE_ENDPOINT || !APPWRITE_PROJECT_ID || !APPWRITE_API_KEY) {
+    console.error('[appwrite-server] Admin client missing config:', {
+      hasEndpoint: !!APPWRITE_ENDPOINT,
+      hasProjectId: !!APPWRITE_PROJECT_ID,
+      hasApiKey: !!APPWRITE_API_KEY,
+    });
+  }
   const client = new Client()
     .setEndpoint(APPWRITE_ENDPOINT)
     .setProject(APPWRITE_PROJECT_ID)
@@ -50,6 +57,26 @@ export const resolveIdentity = (session: Record<string, unknown> | null): string
 };
 
 /**
+ * Test the admin client connection and permissions
+ */
+export const testAdminConnection = async (): Promise<void> => {
+  const { users } = createAdminClient();
+  try {
+    console.log('[appwrite-server] Testing admin connection by attempting list users...');
+    // Try to list users (this requires users.read scope)
+    const usersList = await users.list();
+    console.log('[appwrite-server] ✓ Admin connection successful, users in project:', usersList.total);
+  } catch (error: unknown) {
+    console.error('[appwrite-server] ✗ Admin connection failed:', {
+      code: (error as { code?: number })?.code,
+      message: (error as Error)?.message,
+      fullError: error,
+    });
+    throw new Error(`Appwrite admin client test failed: ${(error as Error)?.message}`);
+  }
+};
+
+/**
  * Ensure an Appwrite user exists (creates one if not found).
  * - Checks specifically for 404 so other errors (auth, network) are not swallowed.
  * - Creates user with email when available so the account is properly identified.
@@ -73,13 +100,19 @@ export const ensureAppwriteUser = async (
 
     // 404 — user doesn't exist, create them
     console.log('[appwrite-server] User not found, creating:', userId);
+    console.log('[appwrite-server] Create params - userId:', userId, 'email:', email, 'name:', name);
     try {
       // Pass email for a proper account identity; no password → passwordless/token-based login
-      await users.create(userId, email || undefined, undefined, name);
-      console.log('[appwrite-server] User created:', userId);
+      const result = await users.create(userId, email || undefined, undefined, name);
+      console.log('[appwrite-server] User created:', userId, 'Result:', result);
     } catch (createErr: unknown) {
       // 409 = already exists due to a race condition — safe to ignore
       const createCode = (createErr as { code?: number })?.code;
+      console.error('[appwrite-server] Create error details:', {
+        code: createCode,
+        message: (createErr as Error)?.message,
+        fullError: createErr,
+      });
       if (createCode !== 409) {
         console.error('[appwrite-server] Failed to create user:', createErr);
         throw createErr;
@@ -100,24 +133,36 @@ export const ensureAppwriteUser = async (
 export const mintUserJWT = async (userId: string): Promise<string> => {
   const { users } = createAdminClient();
 
-  // 1. Admin creates a short-lived magic token for this user
-  const token = await users.createToken(userId);
-  console.log('[appwrite-server] Token created for:', userId);
+  try {
+    // 1. Admin creates a short-lived magic token for this user
+    console.log('[appwrite-server] Creating token for:', userId);
+    const token = await users.createToken(userId);
+    console.log('[appwrite-server] Token created for:', userId, 'Secret present:', !!token.secret);
 
-  // 2. Build a user-scoped (no API key) Appwrite client
-  const userClient = new Client()
-    .setEndpoint(APPWRITE_ENDPOINT)
-    .setProject(APPWRITE_PROJECT_ID);
+    // 2. Build a user-scoped (no API key) Appwrite client
+    const userClient = new Client()
+      .setEndpoint(APPWRITE_ENDPOINT)
+      .setProject(APPWRITE_PROJECT_ID);
 
-  const userAccount = new Account(userClient);
+    const userAccount = new Account(userClient);
 
-  // 3. Exchange the token for a real session
-  await userAccount.createSession(userId, token.secret);
-  console.log('[appwrite-server] Session created for:', userId);
+    // 3. Exchange the token for a real session
+    console.log('[appwrite-server] Creating session with token for:', userId);
+    await userAccount.createSession(userId, token.secret);
+    console.log('[appwrite-server] Session created for:', userId);
 
-  // 4. Mint a JWT from the authenticated user-scoped account
-  const jwtResult = await userAccount.createJWT();
-  console.log('[appwrite-server] JWT minted for:', userId);
+    // 4. Mint a JWT from the authenticated user-scoped account
+    console.log('[appwrite-server] Minting JWT for:', userId);
+    const jwtResult = await userAccount.createJWT();
+    console.log('[appwrite-server] JWT minted for:', userId);
 
-  return jwtResult.jwt;
+    return jwtResult.jwt;
+  } catch (error: unknown) {
+    console.error('[appwrite-server] JWT minting error:', {
+      code: (error as { code?: number })?.code,
+      message: (error as Error)?.message,
+      fullError: error,
+    });
+    throw error;
+  }
 };

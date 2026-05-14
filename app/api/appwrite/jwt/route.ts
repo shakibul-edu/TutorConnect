@@ -6,6 +6,7 @@ import {
   resolveIdentity,
   ensureAppwriteUser,
   mintUserJWT,
+  testAdminConnection,
 } from '@/lib/appwrite-server';
 
 export async function GET() {
@@ -20,6 +21,17 @@ export async function GET() {
     console.error('[appwrite/jwt] Missing env: NEXT_PUBLIC_APPWRITE_PROJECT_ID or APPWRITE_API_KEY');
     return NextResponse.json(
       { error: 'Missing Appwrite configuration on the server.' },
+      { status: 500 }
+    );
+  }
+
+  // Test admin connection first
+  try {
+    await testAdminConnection();
+  } catch (testError: unknown) {
+    console.error('[JWT-DEBUG] Admin connection test failed:', testError);
+    return NextResponse.json(
+      { error: 'Appwrite admin client not properly configured', details: (testError as Error)?.message },
       { status: 500 }
     );
   }
