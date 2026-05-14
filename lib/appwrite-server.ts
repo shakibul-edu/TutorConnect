@@ -13,6 +13,16 @@ if (!APPWRITE_API_KEY) {
   console.error('[appwrite-server] APPWRITE_API_KEY is not set.');
 }
 
+// Log env var details for debugging
+if (process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID) {
+  console.log('[appwrite-server] ENV: NEXT_PUBLIC_APPWRITE_PROJECT_ID length:', process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID.length);
+  console.log('[appwrite-server] ENV: NEXT_PUBLIC_APPWRITE_PROJECT_ID value:', `"${process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID}"`);
+}
+if (process.env.APPWRITE_API_KEY) {
+  console.log('[appwrite-server] ENV: APPWRITE_API_KEY length:', process.env.APPWRITE_API_KEY.length);
+  console.log('[appwrite-server] ENV: APPWRITE_API_KEY prefix:', `"${process.env.APPWRITE_API_KEY.substring(0, 30)}..."`);
+}
+
 export const DB_ID =
   process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || '69c24a79002d55f14064';
 export const MESSAGES_COL_ID =
@@ -31,11 +41,24 @@ export const createAdminClient = () => {
       hasApiKey: !!APPWRITE_API_KEY,
     });
   }
-  const client = new Client()
-    .setEndpoint(APPWRITE_ENDPOINT)
-    .setProject(APPWRITE_PROJECT_ID)
-    .setKey(APPWRITE_API_KEY);
-  return { client, users: new Users(client) };
+  
+  console.log('[appwrite-server] Creating admin client with:');
+  console.log('[appwrite-server]   Endpoint:', APPWRITE_ENDPOINT);
+  console.log('[appwrite-server]   Project:', APPWRITE_PROJECT_ID);
+  console.log('[appwrite-server]   API Key prefix:', APPWRITE_API_KEY ? `${APPWRITE_API_KEY.substring(0, 20)}...` : 'MISSING');
+  
+  try {
+    const client = new Client()
+      .setEndpoint(APPWRITE_ENDPOINT)
+      .setProject(APPWRITE_PROJECT_ID)
+      .setKey(APPWRITE_API_KEY);
+    
+    console.log('[appwrite-server] Admin client created successfully');
+    return { client, users: new Users(client) };
+  } catch (error: unknown) {
+    console.error('[appwrite-server] Failed to create admin client:', error);
+    throw error;
+  }
 };
 
 /** SHA-256 hash of the identity → stable 32-char Appwrite user ID. */
@@ -60,19 +83,48 @@ export const resolveIdentity = (session: Record<string, unknown> | null): string
  * Test the admin client connection and permissions
  */
 export const testAdminConnection = async (): Promise<void> => {
+  console.log('[appwrite-server] === ADMIN CONNECTION TEST ===');
+  console.log('[appwrite-server] Endpoint:', APPWRITE_ENDPOINT);
+  console.log('[appwrite-server] Project ID:', APPWRITE_PROJECT_ID);
+  console.log('[appwrite-server] API Key:', APPWRITE_API_KEY ? `${APPWRITE_API_KEY.substring(0, 10)}...` : 'NOT SET');
+
+  if (!APPWRITE_ENDPOINT) {
+    throw new Error('APPWRITE_ENDPOINT not configured');
+  }
+  if (!APPWRITE_PROJECT_ID) {
+    throw new Error('APPWRITE_PROJECT_ID not configured');
+  }
+  if (!APPWRITE_API_KEY) {
+    throw new Error('APPWRITE_API_KEY not configured');
+  }
+
   const { users } = createAdminClient();
   try {
-    console.log('[appwrite-server] Testing admin connection by attempting list users...');
+    console.log('[appwrite-server] Attempting to list users (testing connection)...');
     // Try to list users (this requires users.read scope)
     const usersList = await users.list();
     console.log('[appwrite-server] ✓ Admin connection successful, users in project:', usersList.total);
   } catch (error: unknown) {
+    const code = (error as { code?: number })?.code;
+    const message = (error as Error)?.message;
     console.error('[appwrite-server] ✗ Admin connection failed:', {
-      code: (error as { code?: number })?.code,
-      message: (error as Error)?.message,
+      code,
+      message,
       fullError: error,
     });
-    throw new Error(`Appwrite admin client test failed: ${(error as Error)?.message}`);
+
+    // Provide helpful error messages based on the error code
+    if (code === 404) {
+      console.error('[appwrite-server] ❌ 404 Error: Project not found or invalid credentials');
+      console.error('[appwrite-server] Please verify:');
+      console.error('[appwrite-server]   - Endpoint is correct: ' + APPWRITE_ENDPOINT);
+      console.error('[appwrite-server]   - Project ID exists: ' + APPWRITE_PROJECT_ID);
+      console.error('[appwrite-server]   - API Key is valid and has users.read scope');
+    } else if (code === 401 || code === 403) {
+      console.error('[appwrite-server] ❌ Authentication error: API Key may be invalid or expired');
+    }
+
+    throw new Error(`Appwrite admin client test failed (${code}): ${message}`);
   }
 };
 
