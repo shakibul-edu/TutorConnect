@@ -42,7 +42,7 @@ const Footer: React.FC = () => {
                {/* Fixed links manually since mapping strings might need URL logic */}
                <li><Link href="/tutors" className="hover:text-white transition-colors">Browse Tutors</Link></li>
                <li><a href="/#how-it-works" className="hover:text-white transition-colors">How it Works</a></li>
-               <li><a href="#" className="hover:text-white transition-colors">Pricing</a></li>
+               {/* <li><a href="#" className="hover:text-white transition-colors">Pricing</a></li> */}
                <li><Link href="/profile-edit" className="hover:text-white transition-colors">For Tutors</Link></li>
             </ul>
           </div>
@@ -60,12 +60,12 @@ const Footer: React.FC = () => {
 
           {/* Newsletter */}
           <div>
-             <h4 className="font-bold text-lg mb-6">{t.footer.col3}</h4>
+             {/* <h4 className="font-bold text-lg mb-6">{t.footer.col3}</h4> */}
              <div className="flex relative z-10">
-               <input type="email" placeholder={t.footer.placeholder} className="bg-slate-800 text-white px-4 py-3 rounded-l-xl focus:outline-none focus:ring-2 focus:ring-brand-500 w-full border border-slate-700" />
-               <Link href="/login" className="bg-brand-600 px-4 py-3 rounded-r-xl hover:bg-brand-700 transition-colors font-medium flex items-center justify-center">
+               
+               <a href="https://forms.gle/Uix4fz5DyFWMKbqCA" className="bg-brand-600 hover:pointer px-4 py-3 rounded-xl hover:bg-brand-700 transition-colors font-medium flex items-center justify-center">
                  {t.footer.btn}
-               </Link>
+               </a>
              </div>
           </div>
         </div>
