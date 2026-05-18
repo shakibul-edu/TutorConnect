@@ -12,6 +12,7 @@ export interface User {
   first_name: string;
   last_name: string;
   is_teacher: boolean;
+  is_baned?: boolean;
   location?: { lat: number; lng: number };
   banned: boolean;
   image?: string;
@@ -243,6 +244,7 @@ export type ContactRequestStatus = 'pending' | 'accepted' | 'rejected';
 export interface ContactRequest {
   id: number;
   student_name: string;
+  teacher_name?: string;
   student_phone: string;
   fee_budget: number;
   message: string;
@@ -255,6 +257,7 @@ export interface ContactRequest {
   teacher_phone?: string;
   teacher_email?: string;
   student_email?: string;
+  conversation_key?: string;
 }
 
 export interface JobPostAvailabilityPayload {

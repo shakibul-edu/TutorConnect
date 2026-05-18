@@ -29,6 +29,7 @@ const Navbar: React.FC = () => {
   const { pendingUpdate, permissionDenied, confirmUpdate, cancelUpdate, retryLocation } = useLocation(session);
   const { push } = useRouter();
   const pathname = usePathname();
+  const isFullScreenChat = pathname.startsWith('chat/');
 
   const isHomePage = pathname === 'home';
 
@@ -47,6 +48,10 @@ const Navbar: React.FC = () => {
     }
     return () => window.removeEventListener('scroll', handleScroll);
   }, [isHomePage]);
+
+  if (isFullScreenChat) {
+    return null;
+  }
 
   const toggleLanguage = () => {
     setLanguage(language === 'en' ? 'bn' : 'en');

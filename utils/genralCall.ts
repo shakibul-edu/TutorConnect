@@ -48,7 +48,16 @@ export async function getLocation(token: string) {
             } else {
                 return null;
             }
-        } catch (error) {
+        } catch (error: any) {
+            // Show toast for permission errors (banned users)
+            if (error.message && (error.message.includes('permission') || error.message.includes('forbidden'))) {
+                try {
+                    const { toast } = await import('@/lib/toast');
+                    toast.error(error.message);
+                } catch (e) {
+                    console.warn('⚠️ Toast failed:', e);
+                }
+            }
             console.error('Error connecting to server:', error);
             throw error;
         }
