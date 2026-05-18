@@ -51,6 +51,7 @@ export default function TutorDetailsPage({ id }: { id: string }) {
                                     </span>
                                 )}
                             </div>
+                            <p className="text-gray-500 text-sm mt-1">ID: {tutor.id ?? tutor.user.id}</p>
                             <p className="text-gray-500 font-medium capitalize flex items-center gap-2 mt-1">
                                 <GraduationCap className="w-4 h-4" />
                                 {tutor.highest_qualification}

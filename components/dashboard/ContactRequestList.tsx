@@ -35,50 +35,6 @@ const ContactRequestList: React.FC<ContactRequestListProps> = ({ title, requests
   const [selectedRequestId, setSelectedRequestId] = React.useState<number | null>(null);
   const [selectedRequestTeacher, setSelectedRequestTeacher] = React.useState<string>('');
   const [selectedReview, setSelectedReview] = React.useState<TeacherReview | undefined>(undefined);
-  const [presenceByRequestId, setPresenceByRequestId] = React.useState<Record<number, { online: boolean; lastSeen: string | null }>>({});
-
-  React.useEffect(() => {
-    let isCancelled = false;
-
-    const fetchPresence = async () => {
-      const acceptedWithEmail = requests.filter((req) => {
-        if (req.status !== 'accepted') return false;
-        const targetEmail = role === 'teacher' ? req.student_email : req.teacher_email;
-        return Boolean(targetEmail);
-      });
-
-      const nextPresence: Record<number, { online: boolean; lastSeen: string | null }> = {};
-      for (const req of acceptedWithEmail) {
-        const otherUserEmail = role === 'teacher' ? req.student_email : req.teacher_email;
-        try {
-          const res = await fetch('/api/appwrite/presence/status', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ otherUserEmail }),
-          });
-
-          if (!res.ok) continue;
-          const data = (await res.json()) as { online: boolean; lastSeen: string | null };
-          nextPresence[req.id] = { online: Boolean(data.online), lastSeen: data.lastSeen || null };
-        } catch (error) {
-          console.error('Failed to fetch presence for contact request', error);
-        }
-      }
-
-      if (!isCancelled) {
-        setPresenceByRequestId(nextPresence);
-      }
-    };
-
-    if (requests.length > 0) {
-      fetchPresence();
-    }
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [requests, role]);
 
   const handleOpenReviewModal = (requestId: number, teacherName: string, existingReview?: TeacherReview) => {
     setSelectedRequestId(requestId);
@@ -155,19 +111,6 @@ const ContactRequestList: React.FC<ContactRequestListProps> = ({ title, requests
                   <Clock className="w-4 h-4" />
                   <span>Updated {new Date(req.updated_at).toLocaleString()}</span>
                 </div>
-
-                {req.status === 'accepted' && (
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className={`w-2 h-2 rounded-full ${presenceByRequestId[req.id]?.online ? 'bg-green-500' : 'bg-gray-300'}`}></span>
-                    <span className={presenceByRequestId[req.id]?.online ? 'text-green-600 font-medium' : 'text-gray-500'}>
-                      {presenceByRequestId[req.id]?.online
-                        ? 'Online now'
-                        : presenceByRequestId[req.id]?.lastSeen
-                          ? `Last seen ${new Date(presenceByRequestId[req.id].lastSeen as string).toLocaleString()}`
-                          : 'Offline'}
-                    </span>
-                  </div>
-                )}
 
                 {role === 'teacher' && req.status === 'pending' && onStatusChange && (
                   <div className="flex gap-3 pt-2">

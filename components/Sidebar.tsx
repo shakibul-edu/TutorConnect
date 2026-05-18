@@ -1,5 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { useSession } from 'next-auth/react';
 import TimeSlotSelector from "./TimeSlotSelector";
+import MultiSelect from './MultiSelect';
+import { Grade, Medium, Subject } from '../types';
+import { getGradesbyMedium, getMediums, getSubjects } from '../services/backend';
 
 export interface FilterState {
   postId: string;
@@ -8,20 +12,143 @@ export interface FilterState {
   gender: string;
   tuitionType: string;
   distance: number;
+  medium_list?: number[];
+  grade_list?: number[];
+  subject_list?: number[];
 }
+
+export const DEFAULT_FILTER_STATE: FilterState = {
+  postId: "",
+  schedule: undefined,
+  feeRange: 25000,
+  gender: "Any",
+  tuitionType: "All Tuition",
+  distance: 20,
+  medium_list: [],
+  grade_list: [],
+  subject_list: [],
+};
 
 interface SidebarProps {
   onApplyFilter: (filters: FilterState) => void;
   className?: string;
+  academicFilters?: boolean;
+  resetSignal?: number;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ onApplyFilter, className = "" }) => {
+const Sidebar: React.FC<SidebarProps> = ({ onApplyFilter, className = "", academicFilters = false, resetSignal }) => {
+  const { data: session, status } = useSession();
   const [postId, setPostId] = useState("");
   const [schedule, setSchedule] = useState<{ start: string; end: string; days: string[] } | undefined>(undefined);
   const [feeRange, setFeeRange] = useState(15000);
   const [gender, setGender] = useState("Any");
   const [tuitionType, setTuitionType] = useState("All Tuition");
   const [distance, setDistance] = useState(10);
+  const [selectedMediums, setSelectedMediums] = useState<number[]>([]);
+  const [selectedGrades, setSelectedGrades] = useState<number[]>([]);
+  const [selectedSubjects, setSelectedSubjects] = useState<number[]>([]);
+  const [mediumOptions, setMediumOptions] = useState<Medium[]>([]);
+  const [gradeOptions, setGradeOptions] = useState<Grade[]>([]);
+  const [subjectOptions, setSubjectOptions] = useState<Subject[]>([]);
+  const lastResetSignal = useRef<number | undefined>(resetSignal);
+
+  const token = (session as any)?.backendAccess;
+
+  const clearLocalFilters = () => {
+    setPostId("");
+    setSchedule(undefined);
+    setFeeRange(DEFAULT_FILTER_STATE.feeRange);
+    setGender(DEFAULT_FILTER_STATE.gender);
+    setTuitionType(DEFAULT_FILTER_STATE.tuitionType);
+    setDistance(DEFAULT_FILTER_STATE.distance);
+    setSelectedMediums([]);
+    setSelectedGrades([]);
+    setSelectedSubjects([]);
+  };
+
+  const applyDefaultFilters = () => {
+    clearLocalFilters();
+    onApplyFilter(DEFAULT_FILTER_STATE);
+  };
+
+  useEffect(() => {
+    if (!academicFilters) return;
+    if (status !== 'authenticated' || !token) return;
+
+    getMediums(token)
+      .then((data) => {
+        const nextOptions = Array.isArray(data) ? data : data?.results || [];
+        setMediumOptions(nextOptions);
+      })
+      .catch((error) => console.error('Failed to load mediums', error));
+  }, [academicFilters, status, token]);
+
+  useEffect(() => {
+    if (!academicFilters) return;
+
+    const loadGrades = async () => {
+      if (!token || selectedMediums.length === 0) {
+        setGradeOptions([]);
+        setSelectedGrades([]);
+        setSubjectOptions([]);
+        setSelectedSubjects([]);
+        return;
+      }
+
+      try {
+        const data = await getGradesbyMedium(token, { medium_id: selectedMediums.map(String) });
+        const nextGrades = Array.isArray(data) ? data : data?.results || [];
+        setGradeOptions(nextGrades);
+        setSelectedGrades((current) => current.filter((gradeId) => nextGrades.some((grade) => grade.id === gradeId)));
+      } catch (error) {
+        console.error('Failed to load grades', error);
+        setGradeOptions([]);
+        setSelectedGrades([]);
+        setSubjectOptions([]);
+        setSelectedSubjects([]);
+      }
+    };
+
+    loadGrades();
+  }, [academicFilters, token, selectedMediums]);
+
+  useEffect(() => {
+    if (!academicFilters) return;
+
+    const loadSubjects = async () => {
+      if (!token || selectedGrades.length === 0) {
+        setSubjectOptions([]);
+        setSelectedSubjects([]);
+        return;
+      }
+
+      try {
+        const data = await getSubjects(token, { grade_id: selectedGrades.map(String) });
+        const nextSubjects = Array.isArray(data) ? data : data?.results || [];
+        setSubjectOptions(nextSubjects);
+        setSelectedSubjects((current) => current.filter((subjectId) => nextSubjects.some((subject) => subject.id === subjectId)));
+      } catch (error) {
+        console.error('Failed to load subjects', error);
+        setSubjectOptions([]);
+        setSelectedSubjects([]);
+      }
+    };
+
+    loadSubjects();
+  }, [academicFilters, token, selectedGrades]);
+
+  useEffect(() => {
+    if (resetSignal === undefined) return;
+    if (lastResetSignal.current === undefined) {
+      lastResetSignal.current = resetSignal;
+      return;
+    }
+
+    if (lastResetSignal.current !== resetSignal) {
+      lastResetSignal.current = resetSignal;
+      clearLocalFilters();
+    }
+  }, [resetSignal]);
 
   const handleApply = () => {
     onApplyFilter({
@@ -31,6 +158,9 @@ const Sidebar: React.FC<SidebarProps> = ({ onApplyFilter, className = "" }) => {
       gender,
       tuitionType,
       distance,
+      medium_list: selectedMediums,
+      grade_list: selectedGrades,
+      subject_list: selectedSubjects,
     });
   };
 
@@ -59,6 +189,40 @@ const Sidebar: React.FC<SidebarProps> = ({ onApplyFilter, className = "" }) => {
         </h3>
         <TimeSlotSelector value={schedule} onChange={setSchedule} />
       </div>
+
+      {academicFilters && (
+        <>
+          <div className="mb-6">
+            <MultiSelect
+              label="Medium"
+              options={mediumOptions}
+              selectedIds={selectedMediums}
+              onChange={setSelectedMediums}
+              placeholder="Select medium(s)"
+            />
+          </div>
+
+          <div className="mb-6">
+            <MultiSelect
+              label="Grade / Class"
+              options={gradeOptions}
+              selectedIds={selectedGrades}
+              onChange={setSelectedGrades}
+              placeholder="Select grade(s)"
+            />
+          </div>
+
+          <div className="mb-6">
+            <MultiSelect
+              label="Subject"
+              options={subjectOptions}
+              selectedIds={selectedSubjects}
+              onChange={setSelectedSubjects}
+              placeholder="Select subject(s)"
+            />
+          </div>
+        </>
+      )}
 
       {/* Fee Range */}
       <div className="mb-6">
@@ -157,6 +321,12 @@ const Sidebar: React.FC<SidebarProps> = ({ onApplyFilter, className = "" }) => {
           className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
         >
           Apply Filter
+        </button>
+        <button
+          onClick={applyDefaultFilters}
+          className="w-full mt-2 border border-gray-300 hover:border-gray-400 text-gray-700 font-medium py-2.5 px-4 rounded-lg transition-colors"
+        >
+          Clear Filters
         </button>
       </div>
     </div>

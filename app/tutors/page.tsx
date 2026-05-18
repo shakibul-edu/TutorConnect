@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { TutorCard } from '../../components/TutorCard';
-import Sidebar, { FilterState } from '../../components/Sidebar';
+import Sidebar, { DEFAULT_FILTER_STATE, FilterState } from '../../components/Sidebar';
 import { SlidersHorizontal, Plus } from 'lucide-react';
 import { getTeachers } from '../../services/backend';
 import { useSession } from 'next-auth/react';
@@ -19,13 +19,10 @@ const TutorsPage: React.FC = () => {
     const [tutors, setTutors] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [isPostJobModalOpen, setIsPostJobModalOpen] = useState(false);
+    const [sidebarResetSignal, setSidebarResetSignal] = useState(0);
   const [filters, setFilters] = useState<FilterState>({
-    postId: "", // Acts as Tutor ID search
-    schedule: undefined,
-    feeRange: 25000,
-    gender: "Any",
-    tuitionType: "Any",
-    distance: 20
+      ...DEFAULT_FILTER_STATE,
+      tuitionType: "Any",
   });
 
     const fetchTutors = async (appliedFilters: any = {}) => {
@@ -67,6 +64,12 @@ const TutorsPage: React.FC = () => {
         setShowMobileFilter(false);
     };
 
+    const handleResetFilters = () => {
+      setFilters(DEFAULT_FILTER_STATE);
+      setSidebarResetSignal((value) => value + 1);
+      fetchTutors(DEFAULT_FILTER_STATE);
+    };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex flex-col lg:flex-row gap-8">
@@ -84,7 +87,11 @@ const TutorsPage: React.FC = () => {
 
         {/* Sidebar */}
            <div className={`lg:w-72 flex-shrink-0 ${showMobileFilter ? 'block' : 'hidden lg:block'}`}>
-               <Sidebar onApplyFilter={handleApplyFilter} />
+                 <Sidebar
+                   academicFilters
+                   resetSignal={sidebarResetSignal}
+                   onApplyFilter={handleApplyFilter}
+                 />
            </div>
 
         {/* Main Content */}
@@ -108,7 +115,7 @@ const TutorsPage: React.FC = () => {
                 <div className="text-center py-12 bg-white rounded-lg border border-gray-200 border-dashed">
                     <p className="text-gray-500">No tutors match your current criteria.</p>
                      <button 
-                        onClick={() => fetchTutors()}
+                      onClick={handleResetFilters}
                         className="mt-2 text-indigo-600 hover:underline font-medium"
                     >
                         Reset Filters

@@ -50,6 +50,9 @@ export const TutorCard: React.FC<TutorCardProps> = ({ tutor }) => {
                 )}
             </div>
             <p className="text-sm text-gray-500 capitalize">{tutor.highest_qualification}</p>
+            <div className="mt-1">
+              <span className="text-xs text-gray-400">ID: {tutor.id}</span>
+            </div>
              <div className="flex items-center gap-1 mt-1">
                 <Star className={`w-4 h-4 ${tutor.reviews_count > 0 ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
                 <span className="text-sm font-bold text-gray-900">

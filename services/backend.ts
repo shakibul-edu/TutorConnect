@@ -56,12 +56,46 @@ export async function getSubjects(token: string, body: { grade_id: string[] }) {
     }
 }
 
+function buildTeacherFilterParams(filters: any = {}) {
+    const params: Record<string, string | number | Array<string | number>> = {};
+
+    if (filters.postId) params.id = filters.postId;
+    if (filters.feeRange) params.min_salary = filters.feeRange;
+    if (filters.gender && filters.gender !== "Any") params.gender = filters.gender.toLowerCase();
+    if (filters.tuitionType && filters.tuitionType !== "All Tuition") params.teaching_mode = filters.tuitionType.toLowerCase();
+    if (filters.distance) params.preferred_distance = filters.distance;
+
+    if (filters.schedule) {
+        const { start, end, days } = filters.schedule;
+
+        if (start) params.start_time = start;
+        if (end) params.end_time = end;
+        if (Array.isArray(days) && days.length > 0) {
+            params.days_of_week = days;
+        }
+    }
+
+    if (Array.isArray(filters.medium_list) && filters.medium_list.length > 0) {
+        params.medium_list = filters.medium_list;
+    }
+
+    if (Array.isArray(filters.grade_list) && filters.grade_list.length > 0) {
+        params.grade_list = filters.grade_list;
+    }
+
+    if (Array.isArray(filters.subject_list) && filters.subject_list.length > 0) {
+        params.subject_list = filters.subject_list;
+    }
+
+    return params;
+}
+
 // --- Teacher Profile APIs ---
 
 export async function getTeachers(token: string, filters: any = {}) {
     if (token) {
         try {
-            const response = await FetchApi.get('/filter-teachers/', filters, { 'Authorization': `Bearer ${token}` });
+            const response = await FetchApi.get('/filter-teachers/', buildTeacherFilterParams(filters), { 'Authorization': `Bearer ${token}` });
             return response;
         } catch (error) {
             console.error('Error fetching teachers:', error);

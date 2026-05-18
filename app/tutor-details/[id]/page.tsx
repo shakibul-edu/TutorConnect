@@ -161,6 +161,7 @@ export default function TutorDetailsPage() {
                                 <Briefcase className="w-5 h-5" />
                                 {teacher_profile.highest_qualification} • {teacher_profile.teaching_mode} Mode
                             </p>
+                            <p className="font-bold text-md">ID: #{teacher_profile.id ?? id}</p>
                             
                             {/* Key Stats Row */}
                             <div className="flex flex-wrap gap-6 mt-4">
