@@ -151,14 +151,7 @@ const ContactRequestList: React.FC<ContactRequestListProps> = ({ title, requests
                 {role === 'student' && (
                   <>
                     <div className="pt-2 flex gap-3">
-                      {req.status === 'accepted' && req.conversation_key && (
-                        <Link
-                          href={`/chat/${req.conversation_key}`}
-                          className="flex-1 inline-flex items-center justify-center px-3 py-2 rounded-md bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700"
-                        >
-                          Message Now
-                        </Link>
-                      )}
+
                       <Link
                         href={`/tutor-details/${req.teacher}`}
                         className="flex-1 inline-flex items-center justify-center px-3 py-2 rounded-md bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700"
@@ -198,16 +191,7 @@ const ContactRequestList: React.FC<ContactRequestListProps> = ({ title, requests
                   </>
                 )}
 
-                {role === 'teacher' && req.status === 'accepted' && req.conversation_key && (
-                  <div className="pt-2">
-                    <Link
-                      href={`/chat/${req.conversation_key}`}
-                      className="inline-flex items-center justify-center px-3 py-2 rounded-md bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700"
-                    >
-                      Message Now
-                    </Link>
-                  </div>
-                )}
+
               </div>
             </div>
           ))}
