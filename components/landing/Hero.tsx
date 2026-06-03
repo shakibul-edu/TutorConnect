@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Search } from 'lucide-react';
+import { Search, Sparkles } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { Link } from '../../lib/router';
 import Logo from '../Logo';
@@ -55,6 +55,17 @@ const Hero: React.FC = () => {
               <Link href="/profile-edit" className="w-full sm:w-auto px-8 py-4 bg-white text-slate-700 text-xl font-bold rounded-2xl border-2 border-slate-200 shadow-[0_6px_0_0_rgba(226,232,240,1)] active:shadow-none active:translate-y-[6px] hover:bg-slate-50 transition-all duration-150 flex items-center justify-center font-school">
                 {t.hero.btnTeach}
               </Link>
+
+              {/* Quiz CTA */}
+              <a
+                href="https://quiz.etuition.app"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full sm:w-auto px-8 py-4 bg-amber-400 hover:bg-amber-500 text-amber-900 text-xl font-bold rounded-2xl border-2 border-amber-500 shadow-[0_6px_0_0_rgba(217,119,6,0.6)] active:shadow-none active:translate-y-[6px] transition-all duration-150 flex items-center justify-center space-x-2 group"
+              >
+                <Sparkles className="w-6 h-6 group-hover:scale-110 transition-transform" />
+                <span className="font-school">Take Quiz</span>
+              </a>
             </div>
             
             <div className="pt-8 flex items-center space-x-4 text-sm text-slate-500 font-bold">

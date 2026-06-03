@@ -12,6 +12,7 @@ import {
   Bell, 
   Menu, 
   X,
+  Sparkles,
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import useLocation from '../LocationHook';
@@ -125,6 +126,17 @@ const Navbar: React.FC = () => {
             
             <a href="/#features" className={`${textColorClass} font-medium transition-colors cursor-pointer`}>{t.nav.features}</a>
             <a href="/#how-it-works" className={`${textColorClass} font-medium transition-colors cursor-pointer`}>{t.nav.howItWorks}</a>
+
+            {/* Quiz Link */}
+            <a
+              href="https://quiz.etuition.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-400 hover:bg-amber-500 text-amber-900 font-bold rounded-full text-sm transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 border-2 border-amber-500"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Take Quiz
+            </a>
             
             
             {/* Language Toggle */}
@@ -281,6 +293,16 @@ const Navbar: React.FC = () => {
           
           <a href="/#features" className="text-slate-600 hover:text-brand-600 font-medium p-2 block" onClick={() => setIsMobileMenuOpen(false)}>{t.nav.features}</a>
           <a href="/#how-it-works" className="text-slate-600 hover:text-brand-600 font-medium p-2 block" onClick={() => setIsMobileMenuOpen(false)}>{t.nav.howItWorks}</a>
+          <a
+            href="https://quiz.etuition.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 text-amber-800 font-bold rounded-xl hover:bg-amber-100 transition-colors"
+          >
+            <Sparkles className="w-4 h-4 text-amber-500" />
+            Take a Quiz 🎯
+          </a>
 
           {displayUser ? (
              <div className="pt-4 border-t border-gray-100">
