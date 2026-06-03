@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from '../lib/router';
 import { useAuth } from '../lib/auth';
 import { useSession } from 'next-auth/react';
@@ -7,7 +7,7 @@ import Availability from './Availability';
 import MultiSelect from './MultiSelect';
 import { AvailabilitySlot, Education, Qualification, Gender, TeachingMode, Medium, Grade, Subject } from '../types';
 import { validateAvailabilitySlots } from '../utils/availability';
-import { Save, Loader2, Upload, X } from 'lucide-react';
+import { Save, Loader2, Upload, X, ArrowUp } from 'lucide-react';
 import EducationSection from './profile-form/EducationSection';
 import QualificationSection from './profile-form/QualificationSection';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -98,6 +98,21 @@ const profileSchema = z.object({
   })).min(1, "At least one availability slot is required")
 });
 
+// Map validation field paths to human-readable labels
+const fieldLabels: Record<string, string> = {
+  bio: 'Bio',
+  phone: 'Phone Number',
+  minSalary: 'Minimum Salary',
+  experience: 'Experience',
+  medium_list: 'Teaching Medium',
+  grade_list: 'Class / Grade',
+  subject_list: 'Subject',
+  profilePicture: 'Profile Picture',
+  availability: 'Availability',
+  education: 'Education',
+  qualifications: 'Qualifications',
+};
+
 const TeacherProfileForm: React.FC = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
@@ -121,6 +136,9 @@ const TeacherProfileForm: React.FC = () => {
   const [profilePicture, setProfilePicture] = useState<File | null>(null);
   const [profilePicturePreview, setProfilePicturePreview] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Refs for scrolling to error fields
+  const fieldRefs = useRef<Record<string, HTMLElement | null>>({});
 
   // Form State
   const [bio, setBio] = useState('');
@@ -382,25 +400,46 @@ const TeacherProfileForm: React.FC = () => {
         if (!result.success) {
             console.error("Validation failed", result);
             const newErrors: Record<string, string> = {};
+            let firstErrorField: string | null = null;
             if (result.error && result.error.issues) {
                 result.error.issues.forEach(err => {
                     // Map path to friendly string key
                     // Examples: "bio", "education.0.institution"
                     const path = err.path.join('.');
                     newErrors[path] = err.message;
+                    if (!firstErrorField) firstErrorField = path.split('.')[0];
                 });
             }
             setErrors(newErrors);
-            toast.error("Please fix the errors in the form.");
+
+            // Show specific field name in toast instead of generic message
+            if (firstErrorField) {
+                const label = fieldLabels[firstErrorField] || firstErrorField;
+                toast.error(`Please fix: ${label}`);
+                // Scroll to the first error field
+                setTimeout(() => {
+                    const el = fieldRefs.current[firstErrorField!];
+                    if (el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        // Briefly highlight the field
+                        el.classList.add('ring-2', 'ring-red-400', 'ring-offset-2', 'rounded-md');
+                        setTimeout(() => el.classList.remove('ring-2', 'ring-red-400', 'ring-offset-2', 'rounded-md'), 2000);
+                    }
+                }, 50);
+            }
+
             setSubmitting(false);
-            // Scroll to top or first error could be good, but simple toast for now
             return;
         }
 
           const availabilityValidation = validateAvailabilitySlots(availability);
           if (!availabilityValidation.isValid) {
             setErrors({ availability: availabilityValidation.errors.join(' ') });
-            toast.error(availabilityValidation.errors[0] || "Please fix availability details.");
+            toast.error(availabilityValidation.errors[0] || "Please fix: Availability");
+            setTimeout(() => {
+                const el = fieldRefs.current['availability'];
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 50);
             setSubmitting(false);
             return;
           }
@@ -687,6 +726,11 @@ const TeacherProfileForm: React.FC = () => {
   const mappedGrades = gradeOptions.map(g => ({id: g.id, name: g.name}));
   const mappedSubjects = subjectOptions.map(s => ({id: s.id, name: s.name}));
 
+  // Helper to register field refs
+  const setFieldRef = (name: string) => (el: HTMLElement | null) => {
+    fieldRefs.current[name] = el;
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-8 bg-white p-6 rounded-lg shadow-sm border border-gray-200 relative">
       {!hasLocation && (
@@ -756,19 +800,19 @@ const TeacherProfileForm: React.FC = () => {
           <>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
             <div className="space-y-6">
-              <div>
+              <div ref={setFieldRef('bio') as any}>
                 <label className="block text-sm font-medium text-gray-700 mb-1">{t.profile.bio}</label>
             <textarea
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              className={`w-full px-3 py-2 border ${errors.bio ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
               placeholder={t.profile.bioPlaceholder}
             />
             {errors.bio && <p className="text-red-500 text-xs mt-1">{errors.bio}</p>}
           </div>
 
-          <div>
+          <div ref={setFieldRef('phone') as any}>
             <label className="block text-sm font-medium text-gray-700 mb-1">{t.profile.phone}</label>
             <input
               type="tel"
@@ -852,7 +896,7 @@ const TeacherProfileForm: React.FC = () => {
         </div>
 
         <div className="space-y-6">
-            <div>
+            <div ref={setFieldRef('medium_list') as any}>
                 <MultiSelect 
                     label={t.profile.medium}
                     options={mappedMediums} 
@@ -863,7 +907,7 @@ const TeacherProfileForm: React.FC = () => {
                 {errors['medium_list'] && <p className="text-red-500 text-xs mt-1">{errors['medium_list']}</p>}
             </div>
 
-            <div>
+            <div ref={setFieldRef('grade_list') as any}>
                 <MultiSelect 
                     label={t.profile.class}
                     options={mappedGrades}
@@ -874,7 +918,7 @@ const TeacherProfileForm: React.FC = () => {
                 {errors['grade_list'] && <p className="text-red-500 text-xs mt-1">{errors['grade_list']}</p>}
             </div>
 
-            <div>
+            <div ref={setFieldRef('subject_list') as any}>
                 <MultiSelect 
                     label={t.profile.subject}
                     options={mappedSubjects}
@@ -885,13 +929,36 @@ const TeacherProfileForm: React.FC = () => {
                 {errors['subject_list'] && <p className="text-red-500 text-xs mt-1">{errors['subject_list']}</p>}
             </div>
 
-            <div className="pt-2">
+            <div ref={setFieldRef('availability') as any} className="pt-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">{t.profile.availability}</label>
                 <Availability slots={availability} setSlots={setAvailability} />
                 {errors.availability && <p className="text-red-500 text-xs mt-1">{errors.availability}</p>}
             </div>
         </div>
       </div>
+
+      {/* When profile not yet created, show a prominent CTA above locked sections */}
+      {!profileId && (
+        <div className="rounded-xl border-2 border-indigo-200 bg-indigo-50 p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-indigo-800 flex items-center gap-2">
+              <ArrowUp className="w-4 h-4" />
+              Save your basic profile first
+            </p>
+            <p className="text-xs text-indigo-600 mt-1">
+              Fill in the details above and save — the Education &amp; Qualification sections will unlock automatically.
+            </p>
+          </div>
+          <button
+            type="submit"
+            disabled={submitting || !hasLocation}
+            className="inline-flex items-center px-5 py-2.5 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-all whitespace-nowrap"
+          >
+            {submitting ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+            {t.actions.createProfile}
+          </button>
+        </div>
+      )}
 
       <hr className="border-gray-200" />
       <EducationSection 
