@@ -33,7 +33,6 @@ export default function TutorDetailsPage() {
 
             const backendAccess = (session as any)?.backendAccess;
             if (!backendAccess) {
-                console.warn('No backend access token available yet');
                 setLoading(false);
                 return;
             }
@@ -52,7 +51,6 @@ export default function TutorDetailsPage() {
                 }
                 setReviewsLoading(false);
             } catch (error) {
-                console.error("Error fetching teacher profile:", error);
                 setReviewsLoading(false);
             } finally {
                 setLoading(false);
