@@ -37,7 +37,6 @@ const TutorsPage: React.FC = () => {
 
         const backendAccess = (session as any)?.backendAccess;
         if (!backendAccess) {
-            console.warn('No backend access token available yet');
             setLoading(false);
             return;
         }
@@ -47,7 +46,6 @@ const TutorsPage: React.FC = () => {
                 setTutors(Array.isArray(response) ? response : response.results || []);
             }
         } catch (error) {
-            console.error("Error fetching tutors:", error);
             setTutors([]);
         } finally {
             setLoading(false);

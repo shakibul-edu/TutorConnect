@@ -62,9 +62,33 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // JSON-LD Schema for Organization
+  const organizationSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'LocalBusiness',
+    name: 'E-Tuition',
+    description: 'Online platform connecting students with local tutors in Bangladesh',
+    url: 'https://etuition.app',
+    logo: 'https://etuition.app/logo.png',
+    sameAs: [
+      'https://www.facebook.com/etuition',
+      'https://www.linkedin.com/company/etuition',
+    ],
+    contactPoint: {
+      '@type': 'ContactPoint',
+      contactType: 'Customer Support',
+      email: 'support@etuition.app',
+    },
+    areaServed: 'BD',
+  };
+
   return (
     <html lang="en">
       <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+        />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
         <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Fredoka:wght@300;400;500;600;700&family=Baloo+Da+2:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
       </head>

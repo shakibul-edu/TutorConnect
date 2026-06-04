@@ -10,7 +10,6 @@ import { JobPost } from '../../types';
 
 const JobBoardPage: React.FC = () => {
     const { data: session, status } = useSession();
-    console.log('🔍 JobBoardPage Debug - Session status:', status, 'Session data:', session);
     const [showMobileFilter, setShowMobileFilter] = useState(false);
     const [jobs, setJobs] = useState<JobPost[]>([]);
     const [loading, setLoading] = useState(false);
@@ -37,7 +36,6 @@ const JobBoardPage: React.FC = () => {
 
         const backendAccess = (session as any)?.backendAccess;
         if (!backendAccess) {
-             console.warn('No backend access token available yet');
             setLoading(false);
             return;
         }
@@ -59,8 +57,7 @@ const JobBoardPage: React.FC = () => {
             if (response) {
                 setJobs(Array.isArray(response) ? response : response.results || []);
             }
-        } catch (error) {
-            console.error("Error fetching jobs:", error);
+            } catch (error) {
             setJobs([]);
         } finally {
             setLoading(false);

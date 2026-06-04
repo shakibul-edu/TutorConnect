@@ -2,6 +2,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { TeacherProfile, TeacherType } from '../types';
 import { MapPin, Star, CheckCircle, School, Flag, Wifi } from 'lucide-react';
 import { stateManager } from '../services/stateManager';
@@ -29,14 +30,17 @@ export const TutorCard: React.FC<TutorCardProps> = ({ tutor }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 border border-gray-100 overflow-hidden flex flex-col h-full cursor-pointer" onClick={handleViewProfile}>
+    <div className="card group cursor-pointer overflow-hidden flex flex-col h-full" onClick={handleViewProfile}>
       <div className="p-6 flex-grow">
         {/* Header Section */}
-        <div className="flex items-start gap-4 mb-4 border-b border-gray-50 pb-4">
-          <img 
+        <div className="flex items-start gap-4 mb-4 border-b border-gray-100 pb-4">
+          <Image 
             src={getBackendImageUrl(tutor.profile_picture)} 
             alt={tutor.name} 
-            className="w-16 h-16 rounded-full object-cover border-2 border-indigo-50"
+            width={64}
+            height={64}
+            className="rounded-full object-cover border-2 border-indigo-50 flex-shrink-0"
+            loading="lazy"
           />
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between">
