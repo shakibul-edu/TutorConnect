@@ -1,39 +1,54 @@
-import type { MetadataRoute } from 'next'
+/**
+ * app/sitemap.ts
+ *
+ * Dynamic sitemap with sitemap-index support for >50,000 URLs.
+ *
+ * Next.js 14+ supports returning a MetadataRoute.Sitemap array OR
+ * multiple sitemaps via sitemap index by exporting `generateSitemaps`.
+ * We use `generateSitemaps` to chunk URLs when they exceed SITEMAP_CHUNK_SIZE.
+ *
+ * Revalidated every hour (ISR).
+ */
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://etuition.app'
+import type { MetadataRoute } from 'next';
+import {
+  SITEMAP_CHUNK_SIZE,
+  REVALIDATE,
+} from '../lib/seo/config';
+import { buildAllEntries } from '../lib/seo/sitemap-builder';
 
-  // Static routes
-  const staticRoutes = [
-    {
-      url: `${baseUrl}`,
-      lastModified: new Date(),
-      changeFrequency: 'daily' as const,
-      priority: 1,
-    },
-    {
-      url: `${baseUrl}/tutors`,
-      lastModified: new Date(),
-      changeFrequency: 'daily' as const,
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/tuition-jobs`,
-      lastModified: new Date(),
-      changeFrequency: 'daily' as const,
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/auth/signin`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly' as const,
-      priority: 0.5,
-    },
-  ]
+export const revalidate = 3600;
 
-  // Note: Dynamic tutor and job routes would need to be fetched from your backend
-  // For now, we'll just include the static routes
-  // In a production app, you'd fetch all tutor IDs and job IDs and create entries for each
+// ---------------------------------------------------------------------------
+// generateSitemaps — called by Next.js to determine how many sitemaps to emit
+// ---------------------------------------------------------------------------
 
-  return staticRoutes
+/**
+ * Next.js calls `generateSitemaps` first to know how many chunks exist,
+ * then calls the default export once per chunk with the returned `id`.
+ * If there is only one chunk we return a single `{ id: 0 }`.
+ */
+export async function generateSitemaps() {
+  const entries = await buildAllEntries();
+  const chunkCount = Math.max(1, Math.ceil(entries.length / SITEMAP_CHUNK_SIZE));
+  return Array.from({ length: chunkCount }, (_, i) => ({ id: i }));
+}
+
+// ---------------------------------------------------------------------------
+// Default export — returns the slice for the requested chunk id
+// ---------------------------------------------------------------------------
+
+export default async function sitemap({
+  id,
+}: {
+  id: Promise<string> | string | number;
+}): Promise<MetadataRoute.Sitemap> {
+  // Await the id if it is a promise, to support Next.js 16+
+  const resolvedId = typeof id === 'object' && id && 'then' in id ? await id : id;
+  const numericId = Number(resolvedId) || 0;
+
+  const entries = await buildAllEntries();
+  const start = numericId * SITEMAP_CHUNK_SIZE;
+  const end = start + SITEMAP_CHUNK_SIZE;
+  return entries.slice(start, end);
 }

@@ -17,8 +17,19 @@ export const TutorCard: React.FC<TutorCardProps> = ({ tutor }) => {
   
   const { push } = useRouter();
 
+  const slugify = (text: string) => {
+    return text
+      .toString()
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/[^\w\-]+/g, '')
+      .replace(/\-\-+/g, '-');
+  };
+
   const handleViewProfile = () => {
-    push(`tutor-details/${tutor.id}`);
+    const slug = `${slugify(tutor.name)}-${tutor.id}`;
+    push(`tutor/${slug}`);
   };
 
   // Helper to format lists nicely

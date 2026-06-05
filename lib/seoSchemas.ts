@@ -56,7 +56,7 @@ export function generateTutorSchema(tutor: TutorSchemaData) {
     '@context': 'https://schema.org',
     '@type': 'Person',
     name: tutor.name,
-    url: `https://etuition.app/tutor-details/${tutor.id}`,
+    url: `https://etuition.app/tutor/${tutor.name ? tutor.name.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w\-]+/g, '').replace(/\-\-+/g, '-') : 'tutor'}-${tutor.id}`,
   };
 
   if (tutor.qualifications) {

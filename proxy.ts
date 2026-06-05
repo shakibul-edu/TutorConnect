@@ -12,6 +12,11 @@ const protectedRoutes = [
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Intercept /sitemap.xml and rewrite to the custom sitemap-index route
+  if (pathname === '/sitemap.xml') {
+    return NextResponse.rewrite(new URL('/sitemap-index.xml', request.url));
+  }
+
   // Check if the current path is a protected route
   const isProtectedRoute = protectedRoutes.some(route => 
     pathname.startsWith(route)

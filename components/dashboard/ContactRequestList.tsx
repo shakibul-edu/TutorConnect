@@ -153,7 +153,7 @@ const ContactRequestList: React.FC<ContactRequestListProps> = ({ title, requests
                     <div className="pt-2 flex gap-3">
 
                       <Link
-                        href={`/tutor-details/${req.teacher}`}
+                        href={`/tutor/${req.teacher}`}
                         className="flex-1 inline-flex items-center justify-center px-3 py-2 rounded-md bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700"
                       >
                         View Tutor

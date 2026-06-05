@@ -10,28 +10,60 @@ import { getTeachers } from '../../services/backend';
 import { useSession } from 'next-auth/react';
 import PostJobModal from '../../components/PostJobModal';
 import { useAuth } from '../../lib/auth';
+import { FetchApi } from '../../FetchApi';
 
 const TutorsPage: React.FC = () => {
     const { data: session, status } = useSession();
     const { user } = useAuth();
     
-  const [showMobileFilter, setShowMobileFilter] = useState(false);
+    const [showMobileFilter, setShowMobileFilter] = useState(false);
     const [tutors, setTutors] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [isPostJobModalOpen, setIsPostJobModalOpen] = useState(false);
     const [sidebarResetSignal, setSidebarResetSignal] = useState(0);
-  const [filters, setFilters] = useState<FilterState>({
-      ...DEFAULT_FILTER_STATE,
-      tuitionType: "Any",
-  });
+    const [filters, setFilters] = useState<FilterState>({
+        ...DEFAULT_FILTER_STATE,
+        tuitionType: "Any",
+    });
 
     const fetchTutors = async (appliedFilters: any = {}) => {
-        // appliedFilters.tuitionType = appliedFilters.tuitionType.toLowerCase();
         setLoading(true);
 
-        // Wait for authenticated session before calling backend
+        // For search engine robots and guest users, fetch public SEO tutors when not logged in
         if (status !== 'authenticated') {
-            setLoading(false);
+            try {
+                const response = await FetchApi.get('/api/seo/tutors/');
+                if (response && response.results) {
+                    const parsedTutors = response.results.map((t: any) => {
+                        const parts = t.slug.split('-');
+                        const idStr = parts.pop();
+                        const id = Number(idStr) || 0;
+                        const name = parts
+                            .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+                            .join(' ');
+                        return {
+                            id: String(id),
+                            name,
+                            gender: 'any',
+                            highest_qualification: 'Qualified',
+                            medium_list: [],
+                            maximum_grade: '',
+                            distance: 0,
+                            expected_salary: 0,
+                            verified: false,
+                            teaching_mode: 'any',
+                            reviews_average: 0,
+                            reviews_count: 0,
+                        };
+                    });
+                    setTutors(parsedTutors);
+                }
+            } catch (error) {
+                console.error('Error fetching public tutors:', error);
+                setTutors([]);
+            } finally {
+                setLoading(false);
+            }
             return;
         }
 

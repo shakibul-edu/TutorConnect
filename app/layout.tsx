@@ -1,6 +1,7 @@
 
 import React from 'react';
 import type { Metadata } from 'next';
+import { SITE_URL } from '../lib/seo/config';
 import { Inter } from 'next/font/google';
 import { AuthProvider } from '../lib/auth';
 import { ToastProvider } from '../lib/toast';
@@ -25,7 +26,8 @@ export const metadata: Metadata = {
   keywords: ['tuition', 'tutor', 'bangladesh', 'education', 'teacher', 'student', 'home tutor', 'online tutor', 'coaching', 'learning'],
   creator: 'E-Tuition',
   publisher: 'E-Tuition',
-  metadataBase: new URL('https://etuition.app'), // Update with actual domain when deployed
+  metadataBase: new URL(SITE_URL),
+  alternates: { canonical: SITE_URL },
   icons: {
     icon: [
       { url: '/favicon.ico' },
