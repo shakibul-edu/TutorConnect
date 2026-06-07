@@ -17,6 +17,8 @@ const useLocation = (session: any) => {
         newLocation: LocationPosition;
     } | null>(null);
     const [permissionDenied, setPermissionDenied] = useState(false);
+    // locationError is true whenever any geolocation failure occurs (including permission denied)
+    const [locationError, setLocationError] = useState(false);
 
     const backendAccess = (session as any)?.backendAccess;
     const isBanned = (session as any)?.banned_error || (session as any)?.banned;
@@ -57,21 +59,23 @@ const useLocation = (session: any) => {
                         localStorage.setItem('user_location', JSON.stringify(newLocation));
                         setLocationState(newLocation);
                         setPermissionDenied(false);
+                        setLocationError(false);
                         window.location.reload();
                         resolve();
                     } catch (e) {
                         console.error("Failed to update location explicitly", e);
+                        setLocationError(true);
                         reject(e);
                     }
                 },
                 (err) => {
-                    // Ignore timeout errors during auto-retry, but handle denied permissions
+                    // Handle denied permissions or other GPS errors
                     if (err.code === 1) { // PERMISSION_DENIED
                         setPermissionDenied(true);
-                        alert("Please enable location access in your device/browser settings. If already enabled, please check your site permissions.");
                     } else {
                         console.warn("Geolocation warning:", err.message);
                     }
+                    setLocationError(true);
                     reject(err);
                 },
                 { enableHighAccuracy: true, timeout: 30000, maximumAge: 60000 }
@@ -117,6 +121,7 @@ const useLocation = (session: any) => {
         const geoId = navigator.geolocation.watchPosition(
             async (position) => {
                 setPermissionDenied(false); // Reset permission denied if we get a position
+                setLocationError(false);   // Reset any location error on successful position
                 const { latitude, longitude, accuracy } = position.coords;
                 const newLocation = { latitude, longitude, accuracy };
                 
@@ -170,6 +175,7 @@ const useLocation = (session: any) => {
                 if (geoError.code === 1) { // PERMISSION_DENIED
                     setPermissionDenied(true);
                 }
+                setLocationError(true);
             },
             {
                 enableHighAccuracy: true,
@@ -205,6 +211,7 @@ const useLocation = (session: any) => {
         error, 
         pendingUpdate, 
         permissionDenied,
+        locationError,
         confirmUpdate,
         cancelUpdate,
         retryLocation

@@ -13,26 +13,45 @@ import {
   Menu, 
   X,
   Sparkles,
+  MessageSquare,
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import useLocation from '../LocationHook';
 import Logo from './Logo';
 import Image from 'next/image';
 import LocationBanner from './LocationBanner';
+import LocationPermissionModal from './LocationPermissionModal';
 
 const Navbar: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showLocationModal, setShowLocationModal] = useState(false);
   const { language, setLanguage, t } = useLanguage();
   
   const { user, logout, openAuthModal, toggleUserMode } = useAuth();
   const { data: session } = useSession();
-  const { pendingUpdate, permissionDenied, confirmUpdate, cancelUpdate, retryLocation } = useLocation(session);
+  const { pendingUpdate, permissionDenied, locationError, confirmUpdate, cancelUpdate, retryLocation } = useLocation(session);
   const { push } = useRouter();
   const pathname = usePathname();
   const isFullScreenChat = pathname.startsWith('chat/');
 
   const isHomePage = pathname === 'home';
+
+  // Open the bilingual modal, then call retryLocation after confirmation
+  const handleEnableLocationClick = () => {
+    setShowLocationModal(true);
+  };
+
+  const handleModalConfirm = () => {
+    setShowLocationModal(false);
+    retryLocation().catch(() => {
+      // locationError state is set inside the hook — Feedback button will appear
+    });
+  };
+
+  const handleModalCancel = () => {
+    setShowLocationModal(false);
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -87,6 +106,27 @@ const Navbar: React.FC = () => {
 
   return (
     <nav className={`${navbarClasses} flex flex-col`}>
+      {/* Bilingual location permission modal */}
+      <LocationPermissionModal
+        isOpen={showLocationModal}
+        onConfirm={handleModalConfirm}
+        onCancel={handleModalCancel}
+      />
+
+      {/* Floating Feedback button — shown when location error occurs */}
+      {locationError && (
+        <a
+          href="https://forms.gle/Uix4fz5DyFWMKbqCA"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Send Feedback"
+          className="fixed top-4 right-4 z-[200] flex items-center gap-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-full shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 border-2 border-amber-400"
+        >
+          <MessageSquare className="w-3.5 h-3.5" />
+          Feedback
+        </a>
+      )}
+
       {(pendingUpdate || permissionDenied) && (
         <div className="w-full z-[60]">
              {pendingUpdate && (
@@ -101,7 +141,7 @@ const Navbar: React.FC = () => {
                 <LocationBanner 
                     type="permission"
                     message="Location access is denied. Please enable location services for better experience."
-                    onConfirm={retryLocation}
+                    onConfirm={handleEnableLocationClick}
                     onDismiss={() => {
                          // Optional: Allow dismissing permission warning for this session
                     }}

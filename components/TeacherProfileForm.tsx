@@ -7,12 +7,13 @@ import Availability from './Availability';
 import MultiSelect from './MultiSelect';
 import { AvailabilitySlot, Education, Qualification, Gender, TeachingMode, Medium, Grade, Subject } from '../types';
 import { validateAvailabilitySlots } from '../utils/availability';
-import { Save, Loader2, Upload, X, ArrowUp } from 'lucide-react';
+import { Save, Loader2, Upload, X, ArrowUp, MessageSquare } from 'lucide-react';
 import EducationSection from './profile-form/EducationSection';
 import QualificationSection from './profile-form/QualificationSection';
 import { useLanguage } from '../contexts/LanguageContext';
 import useLocation from '../LocationHook';
 import LocationBanner from './LocationBanner';
+import LocationPermissionModal from './LocationPermissionModal';
 import { 
     getMediums, 
     getGradesbyMedium, 
@@ -121,8 +122,21 @@ const TeacherProfileForm: React.FC = () => {
   const { push } = useRouter();
 
   // Location Hook tracking
-  const { location, retryLocation } = useLocation(session);
+  const { location, retryLocation, locationError } = useLocation(session);
   const [hasLocation, setHasLocation] = useState(true);
+  const [showLocationModal, setShowLocationModal] = useState(false);
+
+  // Open the bilingual modal before requesting browser GPS
+  const openLocationModal = () => setShowLocationModal(true);
+
+  const handleLocationModalConfirm = () => {
+    setShowLocationModal(false);
+    retryLocation().catch(() => {
+      // locationError in the hook will flip to true — Feedback button appears
+    });
+  };
+
+  const handleLocationModalCancel = () => setShowLocationModal(false);
 
   useEffect(() => {
      const storedLocation = localStorage.getItem('user_location');
@@ -733,13 +747,34 @@ const TeacherProfileForm: React.FC = () => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8 bg-white p-6 rounded-lg shadow-sm border border-gray-200 relative">
+      {/* Bilingual location permission modal */}
+      <LocationPermissionModal
+        isOpen={showLocationModal}
+        onConfirm={handleLocationModalConfirm}
+        onCancel={handleLocationModalCancel}
+      />
+
+      {/* Floating Feedback button — top-right of page when location errors occur */}
+      {locationError && (
+        <a
+          href="https://forms.gle/Uix4fz5DyFWMKbqCA"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Report a location issue"
+          className="fixed top-4 right-4 z-[200] flex items-center gap-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-full shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 border-2 border-amber-400"
+        >
+          <MessageSquare className="w-3.5 h-3.5" />
+          Feedback
+        </a>
+      )}
+
       {!hasLocation && (
           <div className="absolute inset-0 z-50 bg-white/60 backdrop-blur-[2px] flex flex-col items-center justify-start pt-10 px-4 rounded-lg">
               <div className="w-full max-w-2xl bg-white shadow-xl rounded-xl overflow-hidden border border-amber-200">
                   <LocationBanner 
                       type="permission" 
                       message="Location is required to create or edit your teacher profile. Please enable location." 
-                      onConfirm={retryLocation} 
+                      onConfirm={openLocationModal} 
                   />
               </div>
           </div>
