@@ -25,7 +25,7 @@ const Testimonials: React.FC = () => {
           
            {/* Decorative Illustration */}
            <div className="hidden md:block absolute right-0 -top-10 w-48 h-48 opacity-80 transform -rotate-6">
-              <img src="https://illustrations.popsy.co/amber/shaking-hands.svg" alt="Community" className="w-full h-full object-contain" />
+              <img src="https://illustrations.popsy.co/amber/shaking-hands.svg" alt="Community" className="w-full h-full object-contain" loading="lazy" />
           </div>
         </div>
 
@@ -42,7 +42,7 @@ const Testimonials: React.FC = () => {
               "{t.reviews.r1}"
             </p>
             <div className="flex items-center space-x-4 border-t border-yellow-300/50 pt-4">
-              <img src="https://api.dicebear.com/9.x/notionists/svg?seed=Sarah" className="w-12 h-12 rounded-full border-2 border-yellow-200 bg-white" alt="Sarah J" />
+              <img src="https://api.dicebear.com/9.x/notionists/svg?seed=Sarah" className="w-12 h-12 rounded-full border-2 border-yellow-200 bg-white" alt="Sarah J" loading="lazy" />
               <div>
                 <h4 className="font-bold text-slate-900 font-display">Sarah Jenkins</h4>
                 <p className="text-sm text-slate-600">{t.reviews.r1Role}</p>
@@ -62,7 +62,7 @@ const Testimonials: React.FC = () => {
               "{t.reviews.r2}"
             </p>
             <div className="flex items-center space-x-4 border-t border-blue-300/50 pt-4">
-              <img src="https://api.dicebear.com/9.x/notionists/svg?seed=Mike" className="w-12 h-12 rounded-full border-2 border-blue-200 bg-white" alt="Mike T" />
+              <img src="https://api.dicebear.com/9.x/notionists/svg?seed=Mike" className="w-12 h-12 rounded-full border-2 border-blue-200 bg-white" alt="Mike T" loading="lazy" />
               <div>
                 <h4 className="font-bold text-slate-900 font-display">Mike Thompson</h4>
                 <p className="text-sm text-slate-600">{t.reviews.r2Role}</p>
@@ -82,7 +82,7 @@ const Testimonials: React.FC = () => {
               "{t.reviews.r3}"
             </p>
             <div className="flex items-center space-x-4 border-t border-pink-300/50 pt-4">
-              <img src="https://api.dicebear.com/9.x/notionists/svg?seed=Emily" className="w-12 h-12 rounded-full border-2 border-pink-200 bg-white" alt="Emily R" />
+              <img src="https://api.dicebear.com/9.x/notionists/svg?seed=Emily" className="w-12 h-12 rounded-full border-2 border-pink-200 bg-white" alt="Emily R" loading="lazy" />
               <div>
                 <h4 className="font-bold text-slate-900 font-display">Emily Rodriguez</h4>
                 <p className="text-sm text-slate-600">{t.reviews.r3Role}</p>

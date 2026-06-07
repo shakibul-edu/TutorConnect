@@ -31,11 +31,14 @@ const HowItWorks: React.FC = () => {
                         src="https://illustrations.popsy.co/amber/presentation.svg" 
                         alt="Tutor Teaching Illustration" 
                         className="w-full h-full object-cover p-6 bg-white"
+                        loading="lazy"
                     />
                 </div>
                  {/* Floating Sticky Note */}
                 <div className="absolute top-8 left-8 bg-school-yellow text-slate-900 p-4 rounded-lg shadow-lg transform -rotate-6">
-                    <p className="font-school font-bold text-lg">100% Free!</p>
+                    <p className="font-school font-bold text-sm leading-tight">
+                      মিডিয়া ফি নেই! <span className="block text-xs font-normal opacity-75">No Media Fee!</span>
+                    </p>
                 </div>
             </div>
             {/* Decor Chalk Drawings */}

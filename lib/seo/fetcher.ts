@@ -30,6 +30,13 @@ export interface SeoTutor {
   verified: boolean;
   min_salary: number;
   updated_at: string;
+  
+  gender?: string;
+  preferred_distance?: number;
+  mediums?: string[];
+  grades?: string[];
+  availabilities?: { start_time: string; end_time: string; days_of_week: string }[];
+  reviews?: { id: number; student_name: string; rating: number; comment: string; created_at: string }[];
 }
 
 export interface SeoLocation {
@@ -155,7 +162,58 @@ export async function fetchSeoTutorBySlug(
     }
     const data = await res.json();
     console.log(`[SEO] Response Success for ${url}: HTTP ${res.status}`);
-    return data;
+
+    if (!data) return null;
+
+    // Parse ID from slug: e.g. "shakibul-alam-1" -> 1
+    const parts = slug.split('-');
+    const idStr = parts.pop();
+    const id = Number(idStr) || data.id || 0;
+
+    // Map subjects_taught (array of objects) or subjects (array of strings/objects)
+    let subjects: string[] = [];
+    if (Array.isArray(data.subjects_taught)) {
+      subjects = data.subjects_taught.map((s: any) => {
+        if (typeof s === 'string') return s;
+        return s.name || s.subject_name || '';
+      }).filter(Boolean);
+    } else if (Array.isArray(data.subjects)) {
+      subjects = data.subjects.map((s: any) => {
+        if (typeof s === 'string') return s;
+        return s.name || s.subject_name || '';
+      }).filter(Boolean);
+    }
+
+    // Map mediums, grades, availabilities, and reviews
+    const mediums = Array.isArray(data.mediums) ? data.mediums.map((m: any) => m.name || m) : [];
+    const grades = Array.isArray(data.grades) ? data.grades.map((g: any) => g.name || g) : [];
+    const availabilities = Array.isArray(data.availabilities) ? data.availabilities : [];
+    const reviews = Array.isArray(data.reviews) ? data.reviews : [];
+
+    return {
+      id,
+      slug: data.slug || slug,
+      name: data.name || 'Tutor',
+      bio: data.bio || '',
+      subjects,
+      location: data.location || '',
+      location_name: data.location_name || data.location || '',
+      profile_picture: data.profile_picture || '',
+      rating: typeof data.rating === 'number' ? data.rating : 0,
+      review_count: typeof data.review_count === 'number' ? data.review_count : 0,
+      highest_qualification: data.highest_qualification || '',
+      experience_years: typeof data.experience_years === 'number' ? data.experience_years : 0,
+      teaching_mode: data.teaching_mode || 'any',
+      verified: !!data.verified,
+      min_salary: typeof data.starting_salary === 'number' ? data.starting_salary : (typeof data.min_salary === 'number' ? data.min_salary : 0),
+      updated_at: data.updated_at || new Date().toISOString(),
+      gender: data.gender || 'any',
+      preferred_distance: typeof data.preferred_distance === 'number' ? data.preferred_distance : (typeof data.preferred_distance === 'string' ? Number(data.preferred_distance) : 0),
+      mediums,
+      grades,
+      availabilities,
+      reviews,
+    };
   } catch (err) {
     console.warn(`[SEO] Fetch error for ${url}:`, err);
     return null;

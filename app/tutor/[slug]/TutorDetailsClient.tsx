@@ -32,6 +32,7 @@ export default function TutorDetailsClient({ slug, initialTutor, siteUrl, siteNa
     const [reviews, setReviews] = useState<TeacherReview[]>([]);
     const [reviewsLoading, setReviewsLoading] = useState(false);
     const [availabilitySlots, setAvailabilitySlots] = useState<AvailabilitySlot[]>([]);
+    const [guestAvailabilitySlots, setGuestAvailabilitySlots] = useState<AvailabilitySlot[]>([]);
     
     const id = slug.split('-').pop() || '';
     const scheduledAvailability = profileData?.scheduled_availability;
@@ -119,24 +120,57 @@ export default function TutorDetailsClient({ slug, initialTutor, siteUrl, siteNa
         setAvailabilitySlots(Array.from(slotsByTime.values()));
     }, [scheduledAvailability]);
 
-    // Render Authenticated Full Profile
-    if (status === 'authenticated') {
-        if (loading) {
-            return (
-                <div className="max-w-4xl mx-auto px-4 py-16 flex justify-center items-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-                </div>
-            );
+    // Parse guest availability slots
+    useEffect(() => {
+        const slots = initialTutor.availabilities;
+        if (!slots || !Array.isArray(slots)) {
+            setGuestAvailabilitySlots([]);
+            return;
         }
 
-        if (!profileData || !profileData.teacher_profile) {
-            return (
-                <div className="max-w-4xl mx-auto px-4 py-16 text-center">
-                    <h2 className="text-2xl font-bold text-gray-900">Tutor Not Found</h2>
-                    <button onClick={() => push('tutors')} className="mt-4 text-indigo-600 hover:underline">Back to Tutors</button>
-                </div>
-            );
-        }
+        const slotsByTime = new Map<string, AvailabilitySlot>();
+
+        slots.forEach((slot: any) => {
+            const rawStart = slot.start_time;
+            const rawEnd = slot.end_time;
+            const day = slot.days_of_week;
+
+            if (!rawStart || !rawEnd) return;
+
+            const startTime = rawStart.substring(0, 5);
+            const endTime = rawEnd.substring(0, 5);
+            const timeKey = `${startTime}-${endTime}`;
+
+            if (!slotsByTime.has(timeKey)) {
+                slotsByTime.set(timeKey, {
+                    start: startTime,
+                    end: endTime,
+                    days: [],
+                });
+            }
+
+            const currentSlot = slotsByTime.get(timeKey);
+            if (!currentSlot) return;
+
+            if (day) {
+                if (!currentSlot.days.includes(day)) currentSlot.days.push(day);
+            }
+        });
+
+        setGuestAvailabilitySlots(Array.from(slotsByTime.values()));
+    }, [initialTutor.availabilities]);
+
+    // Show spinner during session loading or profile fetching
+    if (status === 'loading' || (status === 'authenticated' && loading)) {
+        return (
+            <div className="max-w-4xl mx-auto px-4 py-16 flex justify-center items-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+            </div>
+        );
+    }
+
+    // Render Authenticated Full Profile
+    if (status === 'authenticated' && profileData?.teacher_profile) {
 
         const { teacher_profile, academic_profiles, qualifications } = profileData;
 
@@ -461,11 +495,7 @@ export default function TutorDetailsClient({ slug, initialTutor, siteUrl, siteNa
 
     // Render Public/Guest SEO Profile Page (when not authenticated)
     const tutorName = initialTutor.name || 'Tutor';
-    const imgSrc = initialTutor.profile_picture
-      ? initialTutor.profile_picture.startsWith('http')
-        ? initialTutor.profile_picture
-        : `${process.env.NEXT_PUBLIC_IMG_URL || siteUrl}${initialTutor.profile_picture}`
-      : null;
+    const imgSrc = initialTutor.profile_picture ? getBackendImageUrl(initialTutor.profile_picture) : null;
 
     const qualLabel = initialTutor.highest_qualification
       ? initialTutor.highest_qualification.charAt(0).toUpperCase() +
@@ -556,7 +586,7 @@ export default function TutorDetailsClient({ slug, initialTutor, siteUrl, siteNa
                     <div>
                       <p className="text-indigo-200 text-xs">Rating</p>
                       <p className="font-bold text-lg">
-                        ★ {initialTutor.rating.toFixed(1)}{' '}
+                        ★ {initialTutor.rating ? initialTutor.rating.toFixed(1) : '0.0'}{' '}
                         <span className="text-sm font-normal">
                           ({initialTutor.review_count})
                         </span>
@@ -569,6 +599,18 @@ export default function TutorDetailsClient({ slug, initialTutor, siteUrl, siteNa
                       <p className="font-bold text-lg">
                         {initialTutor.location_name || initialTutor.location}
                       </p>
+                    </div>
+                  )}
+                  {initialTutor.preferred_distance > 0 && (
+                    <div>
+                      <p className="text-indigo-200 text-xs">Distance</p>
+                      <p className="font-bold text-lg">{initialTutor.preferred_distance} km</p>
+                    </div>
+                  )}
+                  {initialTutor.gender && initialTutor.gender !== 'any' && (
+                    <div>
+                      <p className="text-indigo-200 text-xs">Gender</p>
+                      <p className="font-bold text-lg capitalize">{initialTutor.gender}</p>
                     </div>
                   )}
                 </div>
@@ -585,21 +627,133 @@ export default function TutorDetailsClient({ slug, initialTutor, siteUrl, siteNa
           </section>
         )}
 
-        {/* Subjects */}
-        {initialTutor.subjects?.length > 0 && (
+        {/* Tutoring Details */}
+        <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 mb-6 space-y-6">
+          <h2 className="text-xl font-bold text-gray-900 border-b border-gray-100 pb-3">Tutoring Details</h2>
+          <div className="space-y-6">
+            {/* Preferred Mediums */}
+            {initialTutor.mediums && initialTutor.mediums.length > 0 ? (
+              <div>
+                <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Preferred Mediums</span>
+                <div className="flex flex-wrap gap-2">
+                  {initialTutor.mediums.map((medium: string) => (
+                    <span key={medium} className="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-medium">
+                      {medium}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div>
+                <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Preferred Mediums</span>
+                <p className="text-gray-500 text-sm">No mediums specified</p>
+              </div>
+            )}
+
+            {/* Classes/Grades */}
+            {initialTutor.grades && initialTutor.grades.length > 0 ? (
+              <div>
+                <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Classes / Grades</span>
+                <div className="flex flex-wrap gap-2">
+                  {initialTutor.grades.map((grade: string) => (
+                    <span key={grade} className="px-3 py-1 bg-green-50 text-green-700 rounded-lg text-sm font-medium">
+                      {grade}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div>
+                <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Classes / Grades</span>
+                <p className="text-gray-500 text-sm">No grades specified</p>
+              </div>
+            )}
+
+            {/* Subjects Taught */}
+            {initialTutor.subjects && initialTutor.subjects.length > 0 ? (
+              <div>
+                <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Subjects Taught</span>
+                <div className="flex flex-wrap gap-2">
+                  {initialTutor.subjects.map((sub: string) => (
+                    <span key={sub} className="px-3 py-1 bg-purple-50 text-purple-700 rounded-lg text-sm font-medium">
+                      {sub}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div>
+                <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Subjects Taught</span>
+                <p className="text-gray-500 text-sm">No subjects specified</p>
+              </div>
+            )}
+
+            {/* Weekly Availability */}
+            <div>
+              <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Weekly Availability</span>
+              {guestAvailabilitySlots.length > 0 ? (
+                <Availability slots={guestAvailabilitySlots} setSlots={setGuestAvailabilitySlots} readOnly />
+              ) : (
+                <p className="text-gray-500 text-sm p-4 bg-gray-50 rounded-md border border-gray-200">No availability schedule set</p>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* Reviews Section */}
+        {initialTutor.reviews && initialTutor.reviews.length > 0 && (
           <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">
-              Subjects Taught
+            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2 mb-4">
+              <Star className="w-5 h-5 text-yellow-500 fill-current" />
+              Reviews
             </h2>
-            <div className="flex flex-wrap gap-2">
-              {initialTutor.subjects.map((sub: string) => (
-                <span
-                  key={sub}
-                  className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium"
-                >
-                  {sub}
+            <div className="space-y-4">
+              {/* Average Rating Banner */}
+              <div className="flex items-center gap-3 p-4 bg-yellow-50 border border-yellow-100 rounded-xl">
+                <div className="flex items-center gap-1">
+                  <Star className="w-6 h-6 fill-yellow-400 text-yellow-400" />
+                  <span className="text-2xl font-bold text-gray-900">
+                    {initialTutor.rating ? initialTutor.rating.toFixed(1) : '0.0'}
+                  </span>
+                </div>
+                <span className="text-gray-600 text-sm">
+                  out of 5 ({initialTutor.review_count} {initialTutor.review_count === 1 ? 'review' : 'reviews'})
                 </span>
-              ))}
+              </div>
+
+              {/* Review list */}
+              <div className="space-y-3">
+                {initialTutor.reviews.map((review: any) => (
+                  <div key={review.id} className="p-4 bg-white border border-gray-200 rounded-xl">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center">
+                          <User className="w-4 h-4 text-indigo-600" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900 text-sm">{review.student_name}</p>
+                          <p className="text-xs text-gray-500">{new Date(review.created_at).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Star
+                            key={star}
+                            className={`w-4 h-4 ${
+                              star <= review.rating
+                                ? 'fill-yellow-400 text-yellow-400'
+                                : 'text-gray-200'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    {review.comment && (
+                      <p className="text-gray-700 text-sm leading-relaxed">{review.comment}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           </section>
         )}
@@ -609,15 +763,31 @@ export default function TutorDetailsClient({ slug, initialTutor, siteUrl, siteNa
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
             Ready to book {tutorName.split(' ')[0]}?
           </h2>
-          <p className="text-gray-600 mb-6">
-            Sign in to view contact details and send a tuition request.
-          </p>
-          <Link
-            href="/auth/signin"
-            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-8 py-3 rounded-xl transition-colors duration-200 shadow-md hover:shadow-lg"
-          >
-            Sign In to Contact
-          </Link>
+          {status === 'authenticated' ? (
+            <>
+              <p className="text-red-600 font-medium mb-6">
+                Unable to establish a secure backend session. Please try logging out and signing in again to request contact details.
+              </p>
+              <Link
+                href="/api/auth/signout"
+                className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold px-8 py-3 rounded-xl transition-colors duration-200 shadow-md hover:shadow-lg"
+              >
+                Sign Out / Re-login
+              </Link>
+            </>
+          ) : (
+            <>
+              <p className="text-gray-600 mb-6">
+                Sign in to view contact details and send a tuition request.
+              </p>
+              <Link
+                href="/auth/signin"
+                className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-8 py-3 rounded-xl transition-colors duration-200 shadow-md hover:shadow-lg"
+              >
+                Sign In to Contact
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Back link */}

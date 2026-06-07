@@ -1,8 +1,7 @@
-
 import React from 'react';
 import type { Metadata } from 'next';
 import { SITE_URL } from '../lib/seo/config';
-import { Inter } from 'next/font/google';
+import { Inter, Outfit, Baloo_Da_2, Fredoka } from 'next/font/google';
 import { AuthProvider } from '../lib/auth';
 import { ToastProvider } from '../lib/toast';
 import Navbar from '../components/Navbar';
@@ -13,21 +12,39 @@ import { LanguageProvider } from '../contexts/LanguageContext';
 import { Analytics } from "@vercel/analytics/next";
 import './globals.css';
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ subsets: ['latin'], display: 'swap', variable: '--font-inter' });
+const outfit = Outfit({ subsets: ['latin'], display: 'swap', variable: '--font-outfit' });
+const balooDa2 = Baloo_Da_2({ subsets: ['bengali', 'latin'], display: 'swap', weight: ['400','500','600','700','800'], variable: '--font-baloo' });
+const fredoka = Fredoka({ subsets: ['latin'], display: 'swap', weight: ['300','400','500','600','700'], variable: '--font-fredoka' });
 
 export const metadata: Metadata = {
   title: {
     default: 'E-Tuition | Best Platform to Find local Tutors & Tuition Jobs by GPS location',
     template: '%s | E-Tuition',
   },
-  description: 'Join E-Tuition to find qualified tutors or tuition jobs in your area. We connect students with verified teachers for better education in Bangladesh.',
+  description: "E-Tuition \u2014 find qualified home tutors or tuition jobs near you via GPS. Zero media fee for tutors. Free for students. Bangladesh's smartest location-based tuition platform.",
   applicationName: 'E-Tuition',
   authors: [{ name: 'E-Tuition Team' }],
-  keywords: ['tuition', 'tutor', 'bangladesh', 'education', 'teacher', 'student', 'home tutor', 'online tutor', 'coaching', 'learning'],
+  keywords: [
+    // English
+    'tuition', 'tutor', 'bangladesh', 'education', 'teacher', 'student',
+    'home tutor', 'online tutor', 'coaching', 'learning', 'no media fee tutor',
+    'free tutor platform', 'gps tutor', 'local tutor',
+    // Bengali
+    'টিউশন', 'টিউটর', 'শিক্ষা', 'বাংলাদেশ', 'শিক্ষক', 'হোম টিউটর',
+    'মিডিয়া ফি ছাড়া টিউটর', 'বিনামূল্যে টিউশন', 'লোকাল টিউটর', 'জিপিএস টিউশন'
+  ],
   creator: 'E-Tuition',
   publisher: 'E-Tuition',
   metadataBase: new URL(SITE_URL),
-  alternates: { canonical: SITE_URL },
+  alternates: {
+    canonical: SITE_URL,
+    languages: {
+      'en': `${SITE_URL}/?lang=en`,
+      'bn': `${SITE_URL}/?lang=bn`,
+      'x-default': SITE_URL,
+    },
+  },
   icons: {
     icon: [
       { url: '/favicon.ico' },
@@ -42,10 +59,11 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_US',
+    alternateLocale: 'bn_BD',
     url: 'https://etuition.app',
     siteName: 'E-Tuition',
-    title: 'E-Tuition - Connect with Local Expert Tutors',
-    description: 'The most trusted platform for finding tutors and tuition jobs by GPS location.',
+    title: 'E-Tuition - Connect with Local Expert Tutors | No Media Fee',
+    description: 'The most trusted platform for finding tutors and tuition jobs by GPS location. Zero media fee for tutors.',
     images: [
       {
         url: '/android-chrome-512x512.png',
@@ -57,8 +75,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'E-Tuition - Find Local Tutors & Tuition Jobs',
-    description: 'Connect with expert tutors or find tuition jobs easily on E-Tuition.',
+    title: 'E-Tuition - Find Local Tutors & Tuition Jobs | Zero Media Fee',
+    description: 'Connect with expert tutors or find tuition jobs easily on E-Tuition. No commission, no media fee.',
     images: ['/android-chrome-512x512.png'],
   },
 };
@@ -91,10 +109,27 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
         />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Fredoka:wght@300;400;500;600;700&family=Baloo+Da+2:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+        {/* Preconnect to image CDNs used below-fold — speeds up lazy-loaded assets */}
+        <link rel="preconnect" href="https://api.dicebear.com" />
+        <link rel="preconnect" href="https://illustrations.popsy.co" />
+        <link rel="preconnect" href="https://flagcdn.com" />
+        {/* dns-prefetch fallback for older mobile browsers */}
+        <link rel="dns-prefetch" href="https://api.dicebear.com" />
+        <link rel="dns-prefetch" href="https://illustrations.popsy.co" />
+        <link rel="dns-prefetch" href="https://flagcdn.com" />
+        {/* Preload hero illustration — it is the LCP element on mobile */}
+        <link
+          rel="preload"
+          href="https://illustrations.popsy.co/amber/studying.svg"
+          as="image"
+          type="image/svg+xml"
+        />
+        {/* Mobile browser chrome color */}
+        <meta name="theme-color" content="#3b82f6" />
+        {/* Prevent iOS from auto-linking phone numbers (causes layout jank) */}
+        <meta name="format-detection" content="telephone=no" />
       </head>
-      <body className={inter.className}>
+      <body className={`${inter.variable} ${outfit.variable} ${balooDa2.variable} ${fredoka.variable} ${inter.className}`}>
         <SessionProviderWrapper>
           <LanguageProvider>
             <AuthProvider>

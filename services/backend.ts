@@ -9,50 +9,47 @@ type FormType = z.infer<typeof formSchema>;
 
 // --- Metadata APIs ---
 
-export async function getMediums(token: string) {
-    if (token) {
-        try {
-            const response = await FetchApi.get('/mediums/', {}, { 'Authorization': `Bearer ${token}` });
-            return response;
-        } catch (error) {
-            console.error('Error connecting to server:', error);
-            throw error;
+export async function getMediums(token?: string) {
+    try {
+        const headers: Record<string, string> = {};
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
         }
-    } else {
-        console.warn('No token found, skipping server connection');
-        return null;
+        const response = await FetchApi.get('/mediums/', {}, headers);
+        return response;
+    } catch (error) {
+        console.error('Error connecting to server:', error);
+        throw error;
     }
 }
 
-export async function getGradesbyMedium(token: string, body: { medium_id: string[] }) {
-    if (token) {
-        try {
-            const params = { medium_id: body.medium_id };
-            const response = await FetchApi.get('/grade-by-medium/', params, { 'Authorization': `Bearer ${token}` });
-            return response;
-        } catch (error) {
-            console.error('Error connecting to server:', error);
-            throw error;
+export async function getGradesbyMedium(token: string | undefined, body: { medium_id: string[] }) {
+    try {
+        const params = { medium_id: body.medium_id };
+        const headers: Record<string, string> = {};
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
         }
-    } else {
-        console.warn('No token found, skipping server connection');
-        return null;
+        const response = await FetchApi.get('/grade-by-medium/', params, headers);
+        return response;
+    } catch (error) {
+        console.error('Error connecting to server:', error);
+        throw error;
     }
 }
 
-export async function getSubjects(token: string, body: { grade_id: string[] }) {
-    if (token) {
-        try {
-            const params = { grade_id: body.grade_id };
-            const response = await FetchApi.get('/subject-by-grade/', params, { 'Authorization': `Bearer ${token}` });
-            return response;
-        } catch (error) {
-            console.error('Error connecting to server:', error);
-            throw error;
+export async function getSubjects(token: string | undefined, body: { grade_id: string[] }) {
+    try {
+        const params = { grade_id: body.grade_id };
+        const headers: Record<string, string> = {};
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
         }
-    } else {
-        console.warn('No token found, skipping server connection');
-        return null;
+        const response = await FetchApi.get('/subject-by-grade/', params, headers);
+        return response;
+    } catch (error) {
+        console.error('Error connecting to server:', error);
+        throw error;
     }
 }
 

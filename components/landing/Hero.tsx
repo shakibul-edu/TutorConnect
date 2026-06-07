@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Search, Sparkles } from 'lucide-react';
+import { Search, Sparkles, BadgeCheck, Ban } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { Link } from '../../lib/router';
 import Logo from '../Logo';
@@ -27,6 +27,18 @@ const Hero: React.FC = () => {
                 <span className="relative inline-flex rounded-full h-3 w-3 bg-brand-500"></span>
               </span>
               <span className="text-sm font-bold text-brand-700 font-school tracking-wide">{t.hero.tag}</span>
+            </div>
+
+            {/* No Media Fee tutor badge — high-impact value prop */}
+            <div className="flex flex-wrap justify-center lg:justify-start gap-2 mb-2">
+              <span className="inline-flex items-center gap-1.5 bg-green-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                {t.hero.heroTutorBadge}
+              </span>
+              <span className="inline-flex items-center gap-1.5 bg-brand-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                GPS-Based Matching
+              </span>
             </div>
 
             <h1 className="text-5xl lg:text-7xl font-extrabold tracking-tight text-slate-900 leading-[1.1] font-display">
@@ -68,13 +80,36 @@ const Hero: React.FC = () => {
               </a>
             </div>
             
-            <div className="pt-8 flex items-center space-x-4 text-sm text-slate-500 font-bold">
+            {/* No Media Fee tutor-acquisition strip */}
+            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3">
+              {/* Student pill */}
+              <div className="inline-flex items-center gap-1.5 bg-green-50 border border-green-200 text-green-800 text-xs font-bold px-3 py-1.5 rounded-full shadow-sm">
+                <BadgeCheck className="w-3.5 h-3.5 text-green-600" />
+                <span>শিক্ষার্থীদের জন্য সম্পূর্ণ ফ্রি · Free for Students</span>
+              </div>
+              {/* Tutor / No Media Fee pill — hero-level emphasis */}
+              <div className="inline-flex items-center gap-1.5 bg-amber-400 border-2 border-amber-500 text-amber-950 text-xs font-extrabold px-3 py-1.5 rounded-full shadow-md ring-2 ring-amber-300/50 animate-pulse-slow">
+                <Ban className="w-3.5 h-3.5" />
+                <span>টিউটরদের মিডিয়া ফি নেই · Zero Media Fee for Tutors</span>
+              </div>
+            </div>
+
+            <div className="pt-4 flex items-center space-x-4 text-sm text-slate-500 font-bold">
               <div className="flex -space-x-4">
                  {[10, 11, 12, 13].map(i => (
-                   <Image key={i} className="rounded-full border-4 border-white shadow-md bg-white object-cover" src={`https://api.dicebear.com/9.x/notionists/svg?seed=${i}`} alt="User" width={40} height={40} unoptimized />
+                   <Image key={i} className="rounded-full border-4 border-white shadow-md bg-white object-cover" src={`https://api.dicebear.com/9.x/notionists/svg?seed=${i}`} alt="User" width={40} height={40} unoptimized loading="lazy" />
                  ))}
               </div>
               <p className="font-school text-lg text-brand-600">{t.hero.social}</p>
+            </div>
+
+            {/* No-media-fee value strip */}
+            <div className="w-full max-w-lg bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center text-xl">💰</div>
+              <div>
+                <p className="text-sm font-bold text-green-900">{t.features.noMediaFeeTitle}</p>
+                <p className="text-xs text-green-700 mt-0.5 leading-relaxed">{t.features.noMediaFeeDesc}</p>
+              </div>
             </div>
           </div>
 

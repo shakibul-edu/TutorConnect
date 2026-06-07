@@ -17,13 +17,39 @@ export type SitemapEntry = MetadataRoute.Sitemap[number];
 export async function buildAllEntries(): Promise<SitemapEntry[]> {
   const now = new Date();
 
-  // Static pages
-  const staticEntries: SitemapEntry[] = STATIC_ROUTES.map((r) => ({
-    url: `${SITE_URL}${r.path}`,
-    lastModified: now,
-    changeFrequency: r.changeFrequency,
-    priority: r.priority,
-  }));
+  // Static pages — emit canonical + bilingual alternates
+  const staticEntries: SitemapEntry[] = STATIC_ROUTES.flatMap((r) => {
+    const canonical = `${SITE_URL}${r.path}`;
+    const enUrl = `${SITE_URL}${r.path}${r.path.includes('?') ? '&' : '?'}lang=en`;
+    const base: SitemapEntry = {
+      url: canonical,
+      lastModified: now,
+      changeFrequency: r.changeFrequency,
+      priority: r.priority,
+      alternates: {
+        languages: {
+          'bn': canonical,       // bn is default, served at canonical URL
+          'en': enUrl,
+          'x-default': canonical,
+        },
+      },
+    };
+    // Also emit the ?lang=en URL as its own entry so crawlers discover it
+    const enEntry: SitemapEntry = {
+      url: enUrl,
+      lastModified: now,
+      changeFrequency: r.changeFrequency,
+      priority: r.priority * 0.9, // slightly lower priority than canonical
+      alternates: {
+        languages: {
+          'bn': canonical,
+          'en': enUrl,
+          'x-default': canonical,
+        },
+      },
+    };
+    return [base, enEntry];
+  });
 
   // Fetch all dynamic data in parallel
   const [tutors, locations, subjects, classes, subjectLocations, classLocations] =

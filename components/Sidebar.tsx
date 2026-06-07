@@ -73,7 +73,6 @@ const Sidebar: React.FC<SidebarProps> = ({ onApplyFilter, className = "", academ
 
   useEffect(() => {
     if (!academicFilters) return;
-    if (status !== 'authenticated' || !token) return;
 
     getMediums(token)
       .then((data) => {
@@ -81,13 +80,13 @@ const Sidebar: React.FC<SidebarProps> = ({ onApplyFilter, className = "", academ
         setMediumOptions(nextOptions);
       })
       .catch((error) => console.error('Failed to load mediums', error));
-  }, [academicFilters, status, token]);
+  }, [academicFilters, token]);
 
   useEffect(() => {
     if (!academicFilters) return;
 
     const loadGrades = async () => {
-      if (!token || selectedMediums.length === 0) {
+      if (selectedMediums.length === 0) {
         setGradeOptions([]);
         setSelectedGrades([]);
         setSubjectOptions([]);
@@ -116,7 +115,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onApplyFilter, className = "", academ
     if (!academicFilters) return;
 
     const loadSubjects = async () => {
-      if (!token || selectedGrades.length === 0) {
+      if (selectedGrades.length === 0) {
         setSubjectOptions([]);
         setSelectedSubjects([]);
         return;

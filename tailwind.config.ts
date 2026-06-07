@@ -9,10 +9,11 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Outfit', 'sans-serif'],
-        display: ['Fredoka', 'sans-serif'],
-        bangla: ['"Baloo Da 2"', 'sans-serif'],
-        inter: ['Inter', 'sans-serif']
+        sans: ['var(--font-outfit)', 'Outfit', 'sans-serif'],
+        display: ['var(--font-fredoka)', 'Fredoka', 'sans-serif'],
+        school: ['var(--font-fredoka)', 'Fredoka', 'sans-serif'],
+        bangla: ['var(--font-baloo)', '"Baloo Da 2"', 'sans-serif'],
+        inter: ['var(--font-inter)', 'Inter', 'sans-serif'],
       },
       colors: {
         brand: {

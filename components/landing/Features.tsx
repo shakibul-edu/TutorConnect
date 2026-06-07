@@ -1,7 +1,7 @@
 'use client';
 
 import React, { forwardRef } from 'react';
-import { MapPin, Navigation, DollarSign, Calendar, ShieldCheck, Zap, LucideProps } from 'lucide-react';
+import { MapPin, Navigation, Ban, Calendar, ShieldCheck, Zap, LucideProps } from 'lucide-react';
 import { Feature } from './types';
 import { useLanguage } from '../../contexts/LanguageContext';
 
@@ -58,8 +58,8 @@ const Features: React.FC = () => {
       id: 3,
       title: t.features.items[2].title,
       description: t.features.items[2].desc,
-      icon: language === 'bn' ? TakaIcon : DollarSign,
-      color: "bg-green-100 text-green-600 border-green-200",
+      icon: Ban,
+      color: "bg-amber-100 text-amber-600 border-amber-300",
     },
     {
       id: 4,
@@ -102,12 +102,10 @@ const Features: React.FC = () => {
         
         {/* Floating Illustrations - Repositioned to stay within view */}
         <div className="hidden lg:block absolute left-4 top-10 w-40 h-40 animate-bounce duration-[4000ms] z-0">
-           {/* Replaced engineer.svg with graphic-design.svg (Smart Tools) */}
-           <img src="https://illustrations.popsy.co/amber/graphic-design.svg" alt="Smart Tools" className="w-full h-full object-contain opacity-90" />
+           <img src="https://illustrations.popsy.co/amber/graphic-design.svg" alt="Smart Tools" className="w-full h-full object-contain opacity-90" loading="lazy" />
         </div>
          <div className="hidden lg:block absolute right-4 top-10 w-40 h-40 animate-pulse duration-[3000ms] z-0">
-           {/* Replaced artist.svg with remote-work.svg (Creative Learning) */}
-           <img src="https://illustrations.popsy.co/amber/remote-work.svg" alt="Creative Learning" className="w-full h-full object-contain opacity-90 transform rotate-12" />
+           <img src="https://illustrations.popsy.co/amber/remote-work.svg" alt="Creative Learning" className="w-full h-full object-contain opacity-90 transform rotate-12" loading="lazy" />
         </div>
 
         <div className="text-center max-w-3xl mx-auto mb-16 relative z-10">
@@ -124,6 +122,29 @@ const Features: React.FC = () => {
           <p className="text-slate-600 text-lg font-medium">
             {t.features.desc}
           </p>
+        </div>
+
+        {/* ── No Media Fee spotlight banner ── */}
+        <div className="relative z-10 mb-10 rounded-2xl overflow-hidden border-2 border-amber-300 shadow-lg">
+          <div className="bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 px-6 py-5 flex flex-col sm:flex-row items-center gap-4">
+            {/* Icon cluster */}
+            <div className="flex-shrink-0 w-14 h-14 bg-white rounded-xl flex items-center justify-center shadow-md border-2 border-amber-300">
+              <Ban className="w-7 h-7 text-amber-700" strokeWidth={2.5} />
+            </div>
+            <div className="flex-1 text-center sm:text-left">
+              <p className="text-amber-950 font-extrabold text-lg leading-tight">
+                {t.features.noMediaFeeTitle}
+              </p>
+              <p className="text-amber-900 text-sm mt-1 leading-relaxed">
+                {t.features.noMediaFeeDesc}
+              </p>
+            </div>
+            <div className="flex-shrink-0">
+              <span className="inline-block bg-amber-950 text-amber-300 text-xs font-extrabold uppercase tracking-widest px-4 py-2 rounded-full">
+                {language === 'bn' ? '১০০% বিনামূল্যে' : '100% Free'}
+              </span>
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 relative z-10">

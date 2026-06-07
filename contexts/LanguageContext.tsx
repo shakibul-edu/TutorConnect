@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 type Language = 'en' | 'bn';
 
@@ -16,6 +16,7 @@ const translations = {
     },
     hero: {
       tag: "Skilled Tutors Just Around the Corner!",
+      heroTutorBadge: "No Media Fee for Tutors",
       title1: "Find Your",
       title2: "Perfect Tutor",
       subtitle: "Connect with qualified local teachers instantly.",
@@ -32,11 +33,14 @@ const translations = {
       items: [
          { title: "Nearby Teacher", desc: "GPS-based matching connects you with the best tutors right in your neighborhood." },
          { title: "Auto Location", desc: "No need to search manually. Our smart system detects your zone automatically." },
-         { title: "Free of Cost", desc: "100% free platform for students. Connect without paying any hidden commissions." },
+         { title: "Zero Media Fee", desc: "No commission, no middleman. Tutors connect directly with students — 100% free for everyone." },
          { title: "Smart Scheduling", desc: "Advanced algorithms find tutors who match your specific time availability." },
-         { title: "Qualified Teachers", desc: "Every tutor is verified and rated to ensure high-quality education standards." },
-         { title: "One Tap Solution", desc: "Instant booking and connection. Education is just a single tap away." }
-      ]
+         { title: "Verified Teachers", desc: "Every tutor is verified and rated to ensure high-quality education standards." },
+         { title: "One Tap Connect", desc: "Instant booking and connection. Education is just a single tap away." }
+      ],
+      noMediaFeeTitle: "Zero Media Fee for Tutors",
+      noMediaFeeDesc: "Unlike traditional tuition media, we never charge tutors a single taka. No commission. No middleman. Just direct connections.",
+      noMediaFeeBadge: "টিউটরদের জন্য কোনো মিডিয়া ফি নেই · No Media Fee for Tutors"
     },
     how: {
       title: "How It Works",
@@ -65,9 +69,9 @@ const translations = {
     cta: {
       tag: "Start Learning Today",
       title: "Ready for your first class?",
-      desc: "Join thousands of students and tutors connecting daily. Completely free, location-based, and hassle-free.",
+      desc: "Join thousands of students and tutors connecting daily. Completely free, no media fee, location-based, and hassle-free.",
       btn1: "Find a Tutor Now",
-      btn2: "Become a Tutor"
+      btn2: "Become a Tutor — Free"
     },
     footer: {
       desc: "The smartest way to find local tutors. Location-based matching for effective learning experiences.",
@@ -134,6 +138,7 @@ bn: {
 
   hero: {
     tag: "আপনার আশেপাশেই দক্ষ টিউটর রয়েছে!",
+    heroTutorBadge: "টিউটরদের জন্য কোনো মিডিয়া ফি নেই",
     title1: "খুঁজে নিন আপনার",
     title2: "পারফেক্ট টিউটর",
     subtitle: "দ্রুত খুঁজে নিন আপনার এলাকার অভিজ্ঞ শিক্ষক।",
@@ -159,8 +164,8 @@ bn: {
         desc: "ম্যানুয়ালি লোকেশন দিতে হবে না। অ্যাপ নিজেই আপনার এলাকা শনাক্ত করবে।"
       },
       {
-        title: "সম্পূর্ণ ফ্রি",
-        desc: "স্টুডেন্টদের জন্য পুরো প্ল্যাটফর্ম একদম ফ্রি।"
+        title: "মিডিয়া ফি নেই",
+        desc: "কোনো কমিশন নেই, কোনো মিডিয়া ফি নেই। টিউটর সরাসরি স্টুডেন্টের সাথে কানেক্ট করুন — সম্পূর্ণ বিনামূল্যে।"
       },
       {
         title: "স্মার্ট শিডিউল",
@@ -174,7 +179,10 @@ bn: {
         title: "ওয়ান ট্যাপ কানেকশন",
         desc: "এক ক্লিকেই টিউটরের সাথে যোগাযোগ করুন।"
       }
-    ]
+    ],
+    noMediaFeeTitle: "টিউটরদের জন্য কোনো মিডিয়া ফি নেই",
+    noMediaFeeDesc: "প্রচলিত টিউশন মিডিয়ার মতো কোনো কমিশন নেই। টিউটর সরাসরি স্টুডেন্টের সাথে যোগাযোগ করুন — কোনো মধ্যস্থতাকারী ছাড়াই।",
+    noMediaFeeBadge: "টিউটরদের জন্য কোনো মিডিয়া ফি নেই · No Media Fee for Tutors"
   },
 
   how: {
@@ -213,10 +221,10 @@ bn: {
   cta: {
     tag: "আজই শুরু করুন",
     title: "প্রথম ক্লাসের জন্য প্রস্তুত?",
-    desc: "হাজারো শিক্ষার্থী ও টিউটর প্রতিদিন যুক্ত হচ্ছে। সম্পূর্ণ ফ্রি এবং ঝামেলাহীন।",
+    desc: "হাজারো শিক্ষার্থী ও টিউটর প্রতিদিন যুক্ত হচ্ছে। কোনো মিডিয়া ফি নেই, সম্পূর্ণ ফ্রি এবং ঝামেলাহীন।",
 
     btn1: "এখনই টিউটর খুঁজুন",
-    btn2: "টিউটর হতে চাই"
+    btn2: "টিউটর হন — বিনামূল্যে"
   },
 
   footer: {
@@ -310,6 +318,10 @@ bn: {
 }
 };
 
+// ---------------------------------------------------------------------------
+// Types & constants
+// ---------------------------------------------------------------------------
+
 interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
@@ -318,21 +330,68 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [language, setLanguage] = useState<Language>('bn');
+const STORAGE_KEY = 'etuition_lang';
+const SUPPORTED: Language[] = ['en', 'bn'];
 
-  const value = {
-    language,
-    setLanguage,
-    t: translations[language]
+function isValidLang(v: string | null): v is Language {
+  return SUPPORTED.includes(v as Language);
+}
+
+/** Read preferred language: URL ?lang= → localStorage → 'bn' */
+function readInitialLanguage(): Language {
+  if (typeof window === 'undefined') return 'bn';
+  const urlLang = new URLSearchParams(window.location.search).get('lang');
+  if (isValidLang(urlLang)) return urlLang;
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (isValidLang(stored)) return stored;
+  return 'bn';
+}
+
+/** Reflect language in URL without triggering a navigation */
+function syncLangToUrl(lang: Language) {
+  if (typeof window === 'undefined') return;
+  const url = new URL(window.location.href);
+  // 'bn' is the default — keep URLs clean by omitting the param
+  if (lang === 'bn') {
+    url.searchParams.delete('lang');
+  } else {
+    url.searchParams.set('lang', lang);
+  }
+  window.history.replaceState(null, '', url.toString());
+}
+
+// ---------------------------------------------------------------------------
+// Provider
+// ---------------------------------------------------------------------------
+
+export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [language, setLanguageState] = useState<Language>('bn');
+
+  // Hydrate from URL / localStorage after SSR
+  useEffect(() => {
+    const initial = readInitialLanguage();
+    setLanguageState(initial);
+    document.documentElement.lang = initial;
+  }, []);
+
+  const setLanguage = (lang: Language) => {
+    setLanguageState(lang);
+    localStorage.setItem(STORAGE_KEY, lang);
+    syncLangToUrl(lang);
+    // Keep <html lang="…"> in sync — crawlers and screen readers read this
+    document.documentElement.lang = lang;
   };
 
   return (
-    <LanguageContext.Provider value={value}>
+    <LanguageContext.Provider value={{ language, setLanguage, t: translations[language] }}>
       {children}
     </LanguageContext.Provider>
   );
 };
+
+// ---------------------------------------------------------------------------
+// Hook
+// ---------------------------------------------------------------------------
 
 export const useLanguage = () => {
   const context = useContext(LanguageContext);

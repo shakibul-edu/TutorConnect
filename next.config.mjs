@@ -48,6 +48,8 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '10mb',
     },
+    // Tree-shake icon libraries — saves ~50-80 KB JS on mobile
+    optimizePackageImports: ['lucide-react'],
   },
   async headers() {
     const backendUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.BASE_URL || 'http://localhost:8000';
@@ -95,6 +97,11 @@ const nextConfig = {
           {
             key: 'Referrer-Policy',
             value: 'strict-origin-when-cross-origin',
+          },
+          // Tell CDNs to cache separate versions per language
+          {
+            key: 'Vary',
+            value: 'Accept-Language',
           },
           // Development-friendly CSP allowing Google Identity Services and HMR
           {

@@ -189,3 +189,20 @@ p {
     opacity: 1;
   }
 }
+
+/* Slow pulse for the "Zero Media Fee" badge — draws the eye without being distracting */
+.animate-pulse-slow {
+  animation: pulseSlow 3s ease-in-out infinite;
+}
+
+@keyframes pulseSlow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.03); }
+}
+
+/* Modal entrance animations */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes zoomIn95 { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+
+.animate-in.fade-in { animation: fadeIn 0.15s ease-out; }
+.animate-in.zoom-in-95 { animation: zoomIn95 0.2s ease-out; }
