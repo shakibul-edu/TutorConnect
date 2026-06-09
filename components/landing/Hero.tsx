@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Search, Sparkles, BadgeCheck, Ban } from 'lucide-react';
+import { Search, BadgeCheck, Ban } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { Link } from '../../lib/router';
 import Logo from '../Logo';
@@ -59,25 +59,14 @@ const Hero: React.FC = () => {
             </p>
 
             <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4 w-full lg:w-auto pt-4">
-              <Link href="/tutors" className="w-full sm:w-auto px-8 py-4 bg-brand-600 text-white text-xl font-bold rounded-2xl shadow-[0_6px_0_0_rgba(29,78,216,1)] active:shadow-none active:translate-y-[6px] transition-all duration-150 flex items-center justify-center space-x-2 border-2 border-brand-700 group">
+              <Link href="/tutors" className="w-full sm:w-auto px-4 py-3 sm:px-6 sm:py-4 bg-brand-600 text-white text-lg sm:text-xl font-bold rounded-2xl shadow-[0_6px_0_0_rgba(29,78,216,1)] active:shadow-none active:translate-y-[6px] transition-all duration-150 flex items-center justify-center space-x-2 border-2 border-brand-700 group">
                 <Search className="w-6 h-6 group-hover:scale-110 transition-transform" />
                 <span className="font-school">{t.hero.btnFind}</span>
               </Link>
               
-              <Link href="/profile-edit" className="w-full sm:w-auto px-8 py-4 bg-white text-slate-700 text-xl font-bold rounded-2xl border-2 border-slate-200 shadow-[0_6px_0_0_rgba(226,232,240,1)] active:shadow-none active:translate-y-[6px] hover:bg-slate-50 transition-all duration-150 flex items-center justify-center font-school">
+              <Link href="/profile-edit" className="w-full sm:w-auto px-4 py-3 sm:px-6 sm:py-4 bg-white text-slate-700 text-lg sm:text-xl font-bold rounded-2xl border-2 border-slate-200 shadow-[0_6px_0_0_rgba(226,232,240,1)] active:shadow-none active:translate-y-[6px] hover:bg-slate-50 transition-all duration-150 flex items-center justify-center font-school">
                 {t.hero.btnTeach}
               </Link>
-
-              {/* Quiz CTA */}
-              <a
-                href="https://quiz.etuition.app"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full sm:w-auto px-8 py-4 bg-amber-400 hover:bg-amber-500 text-amber-900 text-xl font-bold rounded-2xl border-2 border-amber-500 shadow-[0_6px_0_0_rgba(217,119,6,0.6)] active:shadow-none active:translate-y-[6px] transition-all duration-150 flex items-center justify-center space-x-2 group"
-              >
-                <Sparkles className="w-6 h-6 group-hover:scale-110 transition-transform" />
-                <span className="font-school">Take Quiz</span>
-              </a>
             </div>
             
             {/* No Media Fee tutor-acquisition strip */}

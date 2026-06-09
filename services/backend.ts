@@ -104,6 +104,16 @@ export async function getTeachers(token: string, filters: any = {}) {
     }
 }
 
+export async function getPublicTutors() {
+    try {
+        const response = await FetchApi.get('/api/seo/tutors/');
+        return response;
+    } catch (error) {
+        console.error('Error fetching public teachers:', error);
+        throw error;
+    }
+}
+
 export async function getTeacherProfile(token: string, id: string | undefined = undefined) {
     if (token) {
         try {

@@ -53,6 +53,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, callbac
     setIsLoading(true);
     setError(null);
     try {
+      sessionStorage.setItem('just_logged_in', 'true');
       const redirectUrl = callbackUrl || '/dashboard';
       const result = await signIn('google', { redirect: false, callbackUrl: redirectUrl });
 

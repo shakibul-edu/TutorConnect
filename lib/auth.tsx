@@ -5,6 +5,7 @@ import React, { createContext, useContext, useState, useEffect, Suspense } from 
 import { useSession, signIn } from 'next-auth/react';
 import { User } from '../types';
 import AuthModal from '../components/AuthModal';
+import { RegisterTutorPromptModal } from '../components/RegisterTutorPromptModal';
 import { usePathname, useRouter } from './router';
 import { setUnauthorizedCallback } from '../FetchApi';
 
@@ -24,6 +25,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { data: session, status } = useSession();
   const [user, setUser] = useState<User | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showRegisterPrompt, setShowRegisterPrompt] = useState(false);
   const { push } = useRouter();
   const pathname = usePathname();
 
@@ -71,6 +73,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           image: session.user?.image || undefined
         } as User;
         
+        // Check if just logged in to show register prompt
+        if (typeof window !== 'undefined' && sessionStorage.getItem('just_logged_in') === 'true') {
+            sessionStorage.removeItem('just_logged_in');
+            const hasDeclined = localStorage.getItem('hasDeclinedTutor') === 'true';
+            if (!newUser.is_teacher && !hasDeclined) {
+                // Use setTimeout to avoid setting state while rendering
+                setTimeout(() => setShowRegisterPrompt(true), 100);
+            }
+        }
         
         return newUser;
       });
@@ -126,6 +137,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           isOpen={isModalOpen} 
           onClose={() => setIsModalOpen(false)} 
           onLogin={login} 
+        />
+        <RegisterTutorPromptModal 
+          isOpen={showRegisterPrompt} 
+          onClose={() => setShowRegisterPrompt(false)} 
         />
       </Suspense>
     </AuthContext.Provider>

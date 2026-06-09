@@ -131,7 +131,9 @@ const TeacherProfileForm: React.FC = () => {
 
   const handleLocationModalConfirm = () => {
     setShowLocationModal(false);
-    retryLocation().catch(() => {
+    retryLocation().then(() => {
+      setHasLocation(true);
+    }).catch(() => {
       // locationError in the hook will flip to true — Feedback button appears
     });
   };
@@ -139,8 +141,36 @@ const TeacherProfileForm: React.FC = () => {
   const handleLocationModalCancel = () => setShowLocationModal(false);
 
   useEffect(() => {
-     const storedLocation = localStorage.getItem('user_location');
-     setHasLocation(!!location || !!storedLocation);
+     if (typeof window === 'undefined') return;
+
+     let cancelled = false;
+
+     const checkLocationPermission = async () => {
+         // Check browser permission state (not localStorage, which gets filled by server sync)
+         let browserPermissionGranted = false;
+         try {
+             if (navigator.permissions && navigator.permissions.query) {
+                 const result = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
+                 browserPermissionGranted = result.state === 'granted';
+             }
+         } catch {
+             // Permissions API not supported, fall back to localStorage check
+             const stored = localStorage.getItem('user_location');
+             browserPermissionGranted = stored !== null && stored !== 'null' && stored !== 'undefined';
+         }
+
+         if (cancelled) return;
+         setHasLocation(browserPermissionGranted);
+
+         // If they don't have browser permission, automatically prompt them ONCE for edit-profile
+         if (!browserPermissionGranted && !sessionStorage.getItem('profile_location_prompted')) {
+             sessionStorage.setItem('profile_location_prompted', 'true');
+             setShowLocationModal(true);
+         }
+     };
+
+     const timer = setTimeout(checkLocationPermission, 300);
+     return () => { cancelled = true; clearTimeout(timer); };
   }, [location]);
 
   // Profile ID tracking
@@ -761,7 +791,7 @@ const TeacherProfileForm: React.FC = () => {
           target="_blank"
           rel="noopener noreferrer"
           title="Report a location issue"
-          className="fixed top-4 right-4 z-[200] flex items-center gap-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-full shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 border-2 border-amber-400"
+          className="fixed top-20 right-4 z-[200] flex items-center gap-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-full shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 border-2 border-amber-400"
         >
           <MessageSquare className="w-3.5 h-3.5" />
           Feedback

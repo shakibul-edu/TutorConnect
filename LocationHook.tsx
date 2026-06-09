@@ -102,9 +102,6 @@ const useLocation = (session: any) => {
                 }
             } catch (err: any) {
                 console.error("Failed to sync initial location", err);
-                if (err.message && err.message.includes("Location not set.")) {
-                    retryLocation().catch(e => console.error("Auto retry location failed", e));
-                }
             }
         };
         syncServerLocation();
@@ -113,12 +110,17 @@ const useLocation = (session: any) => {
     // 2. Track Position & Update Logic
     useEffect(() => {
         if (!backendAccess) return;
+        
         if (!navigator.geolocation) {
             setError('Geolocation is not supported by your browser');
             return;
         }
 
-        const geoId = navigator.geolocation.watchPosition(
+        let geoId: number | null = null;
+
+        const startTracking = () => {
+            if (geoId !== null) return; // Already tracking
+            geoId = navigator.geolocation.watchPosition(
             async (position) => {
                 setPermissionDenied(false); // Reset permission denied if we get a position
                 setLocationError(false);   // Reset any location error on successful position
@@ -183,8 +185,33 @@ const useLocation = (session: any) => {
                 maximumAge: 10000,
             }
         );
+        };
 
-        return () => navigator.geolocation.clearWatch(geoId);
+        // Check permissions before tracking to avoid unwanted browser prompts
+        if (navigator.permissions && navigator.permissions.query) {
+            navigator.permissions.query({ name: 'geolocation' }).then((result) => {
+                if (result.state === 'granted') {
+                    startTracking();
+                }
+                
+                // If permission changes to granted, start tracking
+                result.addEventListener('change', () => {
+                    if (result.state === 'granted') {
+                        startTracking();
+                    }
+                });
+            }).catch(e => {
+                // Fallback if permissions API fails but geolocation is available
+                // We won't auto-start to avoid prompts, rely on retryLocation
+                console.warn("Permissions API error", e);
+            });
+        }
+
+        return () => {
+            if (geoId !== null) {
+                navigator.geolocation.clearWatch(geoId);
+            }
+        };
     }, [backendAccess]);
 
     const confirmUpdate = async () => {

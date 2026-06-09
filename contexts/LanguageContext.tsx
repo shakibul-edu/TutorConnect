@@ -22,7 +22,7 @@ const translations = {
       subtitle: "Connect with qualified local teachers instantly.",
       subjects: ["Math", "Science", "Arts"],
       btnFind: "Find a Tutor",
-      btnTeach: "I'm a Teacher",
+      btnTeach: "Register as a Tutor",
       social: "Join 5,000+ happy students"
     },
     features: {
@@ -144,7 +144,7 @@ bn: {
     subtitle: "দ্রুত খুঁজে নিন আপনার এলাকার অভিজ্ঞ শিক্ষক।",
     subjects: ["গণিত", "বিজ্ঞান", "ইংরেজি"],
     btnFind: "টিউটর খুঁজুন",
-    btnTeach: "আমি টিউটর",
+    btnTeach: "Register as a Tutor",
     social: "৫,০০০+ শিক্ষার্থী ইতোমধ্যে যুক্ত হয়েছে"
   },
 

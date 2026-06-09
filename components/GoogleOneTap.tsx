@@ -27,7 +27,7 @@ const GoogleOneTap = () => {
           client_id: clientId,
           callback: async (response: any) => {
             try {
-
+              sessionStorage.setItem('just_logged_in', 'true');
               const result = await signIn('google-onetap', {
                 credential: response.credential,
                 redirect: false,

@@ -43,12 +43,15 @@ export async function getLocation(token: string) {
                 headers: {'Authorization': `Bearer ${token}`},
                 skipToast: true 
             });
-            if(response.location){
+            if (response.location) {
                 return response.location;
             } else {
                 return null;
             }
         } catch (error: any) {
+            if (error.message && error.message.includes('Location not set')) {
+                return null;
+            }
             // Show toast for permission errors (banned users)
             if (error.message && (error.message.includes('permission') || error.message.includes('forbidden'))) {
                 try {
@@ -58,7 +61,7 @@ export async function getLocation(token: string) {
                     console.warn('⚠️ Toast failed:', e);
                 }
             }
-            console.error('Error connecting to server:', error);
+            console.error('Error connecting to server in getLocation:', error);
             throw error;
         }
     } else {

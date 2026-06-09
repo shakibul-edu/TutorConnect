@@ -14,6 +14,7 @@ import {
   X,
   Sparkles,
   MessageSquare,
+  ChevronDown,
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import useLocation from '../LocationHook';
@@ -120,7 +121,7 @@ const Navbar: React.FC = () => {
           target="_blank"
           rel="noopener noreferrer"
           title="Send Feedback"
-          className="fixed top-4 right-4 z-[200] flex items-center gap-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-full shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 border-2 border-amber-400"
+          className="fixed top-20 right-4 z-[200] flex items-center gap-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-full shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 border-2 border-amber-400"
         >
           <MessageSquare className="w-3.5 h-3.5" />
           Feedback
@@ -163,39 +164,41 @@ const Navbar: React.FC = () => {
           <div className="hidden md:flex items-center space-x-8">
             <Link href="/tuition-jobs" className={`${textColorClass} font-medium transition-colors cursor-pointer`}>{t.nav.tuitionJobs}</Link>
             <Link href="/tutors" className={`${textColorClass} font-medium transition-colors cursor-pointer`}>{t.nav.findTutors}</Link>
-            
-            <a href="/#features" className={`${textColorClass} font-medium transition-colors cursor-pointer`}>{t.nav.features}</a>
-            <a href="/#how-it-works" className={`${textColorClass} font-medium transition-colors cursor-pointer`}>{t.nav.howItWorks}</a>
 
-            {/* Quiz Link */}
-            <a
-              href="https://quiz.etuition.app"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-400 hover:bg-amber-500 text-amber-900 font-bold rounded-full text-sm transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 border-2 border-amber-500"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              Take Quiz
-            </a>
-            
+            {/* More Dropdown */}
+            <div className="relative group">
+              <button className={`${textColorClass} font-medium transition-colors cursor-pointer flex items-center gap-1`}>
+                More
+                <ChevronDown className="w-4 h-4 transition-transform group-hover:rotate-180" />
+              </button>
+              <div className="absolute right-0 top-full pt-2 w-48 hidden group-hover:block">
+                <div className="bg-white rounded-lg shadow-lg py-1 ring-1 ring-black/5 border border-gray-100">
+                  <a href="/#features" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 font-medium">{t.nav.features}</a>
+                  <a href="/#how-it-works" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 font-medium">{t.nav.howItWorks}</a>
+                  <div className="border-t border-gray-100 my-1"></div>
+                  <a
+                    href="https://quiz.etuition.app"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-4 py-2.5 text-sm text-amber-800 hover:bg-amber-50 font-bold"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                    Take Quiz
+                  </a>
+                </div>
+              </div>
+            </div>
             
             {/* Language Toggle */}
             <button 
               onClick={toggleLanguage}
-              className="flex items-center space-x-2 px-4 py-2 rounded-full border border-slate-200 hover:bg-slate-50 transition-all shadow-sm hover:shadow-md group bg-white"
+              className="px-3 py-1.5 rounded-full border border-slate-200 hover:bg-slate-50 transition-all shadow-sm hover:shadow-md bg-white"
             >
-              <Image 
-                src={language === 'en' ? "https://flagcdn.com/w40/us.png" : "https://flagcdn.com/w40/bd.png"} 
-                alt={language === 'en' ? "USA Flag" : "Bangladesh Flag"} 
-                className="w-6 h-4 object-cover rounded shadow-sm group-hover:scale-110 transition-transform"
-                width={24}
-                height={16}
-              />
-              <span className="text-sm font-bold text-slate-700 uppercase tracking-wide">{language}</span>
+              <span className="text-sm font-bold text-slate-700 uppercase tracking-wide">{language === 'en' ? 'EN' : 'BN'}</span>
             </button>
 
             {displayUser ? (
-                <>
+                <div className="flex items-center gap-4">
                  {/* Mode Indicator / Action Button */}
                  {user?.is_teacher ? (
                      <div className="flex items-center bg-indigo-50 rounded-full px-3 py-1 border border-indigo-100">
@@ -204,9 +207,14 @@ const Navbar: React.FC = () => {
                         </span>
                       </div>
                  ) : (
-                    <Link href="/job-post/new" className="flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wide transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
-                       <span>+</span> Post a Job
-                    </Link>
+                    <div className="flex items-center gap-3">
+                        <Link href="/profile-edit" className="flex items-center gap-1.5 bg-amber-400 hover:bg-amber-500 text-amber-900 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wide transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 animate-pulse ring-2 ring-amber-300 ring-offset-1">
+                           Are you tutor?
+                        </Link>
+                        <Link href="/job-post/new" className="flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wide transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+                           <span>+</span> Post a Job
+                        </Link>
+                    </div>
                  )}
 
                   {/* Notifications */}
@@ -266,7 +274,7 @@ const Navbar: React.FC = () => {
                       </div>
                     </div>
                  </div>
-                </>
+                </div>
             ) : (
                 <div className="flex items-center gap-3">
                     <button onClick={openAuthModal} className="text-slate-600 hover:text-slate-900 font-medium px-4 py-2 transition-colors">
@@ -300,16 +308,9 @@ const Navbar: React.FC = () => {
 
             <button 
                 onClick={toggleLanguage}
-                className="flex items-center space-x-2 px-3 py-1.5 rounded-full border border-slate-200 bg-white shadow-sm"
+                className="px-3 py-1.5 rounded-full border border-slate-200 bg-white shadow-sm"
               >
-              <Image 
-                src={language === 'en' ? "https://flagcdn.com/w40/us.png" : "https://flagcdn.com/w40/bd.png"} 
-                alt={language === 'en' ? "USA Flag" : "Bangladesh Flag"} 
-                className="w-5 h-3.5 object-cover rounded"
-                width={20}
-                height={14}
-              />
-              <span className="text-xs font-bold text-slate-700 uppercase">{language}</span>
+              <span className="text-xs font-bold text-slate-700 uppercase">{language === 'en' ? 'EN' : 'BN'}</span>
             </button>
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -328,7 +329,12 @@ const Navbar: React.FC = () => {
           <Link href="/tuition-jobs" className="text-slate-600 hover:text-brand-600 font-medium p-2 block" onClick={() => setIsMobileMenuOpen(false)}>Tuition Jobs</Link>
           <Link href="/tutors" className="text-slate-600 hover:text-brand-600 font-medium p-2 block" onClick={() => setIsMobileMenuOpen(false)}>Find Tutors</Link>
           {displayUser && (
-            <Link href="/job-post/new" className="text-indigo-600 hover:text-indigo-700 font-bold p-2 block bg-indigo-50 rounded-lg" onClick={() => setIsMobileMenuOpen(false)}>📝 Post a Job</Link>
+            <div className="flex flex-col gap-2">
+              {!user?.is_teacher && (
+                <Link href="/profile-edit" className="text-amber-800 hover:text-amber-900 font-bold p-2 block bg-amber-100 rounded-lg animate-pulse border border-amber-300" onClick={() => setIsMobileMenuOpen(false)}>👨‍🏫 Are you tutor?</Link>
+              )}
+              <Link href="/job-post/new" className="text-indigo-600 hover:text-indigo-700 font-bold p-2 block bg-indigo-50 rounded-lg" onClick={() => setIsMobileMenuOpen(false)}>📝 Post a Job</Link>
+            </div>
           )}
           
           <a href="/#features" className="text-slate-600 hover:text-brand-600 font-medium p-2 block" onClick={() => setIsMobileMenuOpen(false)}>{t.nav.features}</a>
