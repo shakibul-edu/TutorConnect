@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { TutorCard } from '../../components/TutorCard';
+import { SeoTutorCard } from '../../components/SeoTutorCard';
 import Sidebar, { DEFAULT_FILTER_STATE, FilterState } from '../../components/Sidebar';
 import { SlidersHorizontal, Plus } from 'lucide-react';
 import { getTeachers, getPublicTutors } from '../../services/backend';
@@ -89,22 +90,28 @@ const TutorsPage: React.FC = () => {
                         const parts = t.slug.split('-');
                         const idStr = parts.pop();
                         const id = Number(idStr) || 0;
-                        const name = parts
+                        const name = t.name || parts
                             .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
                             .join(' ');
                         return {
                             id: String(id),
+                            slug: t.slug,
                             name,
-                            gender: 'any',
-                            highest_qualification: 'Qualified',
-                            medium_list: [],
+                            bio: t.bio || '',
+                            gender: t.gender || 'any',
+                            highest_qualification: t.highest_qualification || 'Qualified',
+                            medium_list: t.mediums || t.medium_list || [],
                             maximum_grade: '',
-                            distance: 0,
-                            expected_salary: 0,
-                            verified: false,
-                            teaching_mode: 'any',
-                            reviews_average: 0,
-                            reviews_count: 0,
+                            distance: t.preferred_distance || 0,
+                            expected_salary: t.min_salary || t.starting_salary || 0,
+                            profile_picture: t.profile_picture || '',
+                            verified: !!t.verified,
+                            teaching_mode: t.teaching_mode || 'any',
+                            reviews_average: t.rating || 0,
+                            reviews_count: t.review_count || 0,
+                            subjects: t.subjects || [],
+                            location: t.location || '',
+                            location_name: t.location_name || t.location || '',
                         };
                     });
                     setTutors(parsedTutors);
@@ -215,7 +222,11 @@ const TutorsPage: React.FC = () => {
             ) : tutors.length > 0 ? (
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
                     {tutors.map(tutor => (
-                        <TutorCard key={tutor.id} tutor={tutor} />
+                        status === 'authenticated' ? (
+                            <TutorCard key={tutor.id} tutor={tutor} />
+                        ) : (
+                            <SeoTutorCard key={tutor.id} tutor={tutor} />
+                        )
                     ))}
                 </div>
             ) : (

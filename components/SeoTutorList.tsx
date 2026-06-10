@@ -5,8 +5,7 @@ import { useSession } from 'next-auth/react';
 import { getTeacherFullProfile } from '../services/backend';
 import { TutorCard } from './TutorCard';
 import { SeoTutor } from '../lib/seo/fetcher';
-import Link from 'next/link';
-import { ShieldCheck } from 'lucide-react';
+import { SeoTutorCard } from './SeoTutorCard';
 
 interface SeoTutorListProps {
   initialTutors: SeoTutor[];
@@ -119,44 +118,33 @@ export default function SeoTutorList({ initialTutors }: SeoTutorListProps) {
     );
   }
 
-  // Fallback / Guest view: render beautiful placeholder cards
+  // Fallback / Guest view: render SEO-friendly cards with available data
   return (
     <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
       {initialTutors.map((t) => {
         const { id, name } = parseTutorFromSlug(t.slug);
-        const slug = `${slugify(name)}-${id}`;
         
         return (
-          <Link
+          <SeoTutorCard
             key={t.slug}
-            href={`/tutor/${slug}`}
-            className="group bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all duration-200 overflow-hidden cursor-pointer flex flex-col h-full"
-          >
-            <div className="p-5 flex-grow">
-              <div className="flex items-start gap-4">
-                <div className="w-14 h-14 rounded-full bg-indigo-100 flex-shrink-0 overflow-hidden flex items-center justify-center">
-                  <span className="text-xl font-bold text-indigo-600">
-                    {name.charAt(0)}
-                  </span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-900 truncate group-hover:text-indigo-600 transition-colors">
-                    {name}
-                  </h3>
-                  <p className="text-xs text-gray-400 mt-1">ID: #{id}</p>
-                  <p className="text-xs text-indigo-600 mt-2 bg-indigo-50 inline-block px-2 py-0.5 rounded-full font-medium">
-                    Guest View
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-gray-50 px-5 py-3 border-t border-gray-100 text-center">
-              <span className="text-xs text-indigo-600 font-semibold hover:underline">
-                Sign in to view full profile
-              </span>
-            </div>
-          </Link>
+            tutor={{
+              id: String(id),
+              slug: t.slug,
+              name: t.name || name,
+              bio: t.bio,
+              highest_qualification: t.highest_qualification,
+              teaching_mode: t.teaching_mode,
+              verified: t.verified,
+              profile_picture: t.profile_picture,
+              reviews_average: t.rating,
+              reviews_count: t.review_count,
+              expected_salary: t.min_salary,
+              subjects: t.subjects,
+              location: t.location,
+              location_name: t.location_name,
+              medium_list: t.mediums,
+            }}
+          />
         );
       })}
     </div>

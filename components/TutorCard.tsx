@@ -45,14 +45,16 @@ export const TutorCard: React.FC<TutorCardProps> = ({ tutor }) => {
       <div className="p-6 flex-grow">
         {/* Header Section */}
         <div className="flex items-start gap-4 mb-4 border-b border-gray-100 pb-4">
-          <Image 
-            src={getBackendImageUrl(tutor.profile_picture)} 
-            alt={tutor.name} 
-            width={64}
-            height={64}
-            className="rounded-full object-cover border-2 border-indigo-50 flex-shrink-0"
-            loading="lazy"
-          />
+          <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-indigo-50 flex-shrink-0">
+            <Image 
+              src={getBackendImageUrl(tutor.profile_picture)} 
+              alt={tutor.name} 
+              width={64}
+              height={64}
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
+          </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between">
                 <h3 className="text-lg font-bold text-gray-900 truncate group-hover:text-indigo-600">
