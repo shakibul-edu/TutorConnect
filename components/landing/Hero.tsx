@@ -5,6 +5,7 @@ import { Search, BadgeCheck, Ban } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { Link } from '../../lib/router';
 import Logo from '../Logo';
+import studyImage from '../../src/images/studying_note.png';
 import Image from 'next/image';
 
 const Hero: React.FC = () => {
@@ -112,9 +113,9 @@ const Hero: React.FC = () => {
               <div className="absolute inset-0 bg-brand-100 rounded-[3rem] -rotate-3 transform transition-transform group-hover:-rotate-1 border-4 border-white opacity-50 z-0"></div>
               
               <Image 
-                src="https://illustrations.popsy.co/amber/studying.svg" 
+                src={studyImage} 
                 alt="Student Studying with Books" 
-                className="relative z-10 w-full h-full object-contain drop-shadow-2xl transform transition-transform hover:-translate-y-4 duration-500"
+                className="relative rounded-xl z-10 w-full h-full object-contain drop-shadow-2xl transform transition-transform hover:-translate-y-4 duration-500"
                 width={500}
                 height={500}
                 priority
