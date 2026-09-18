@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
-
+import no_media_fee from '../../src/images/no_media_fee.png';
+import Image from 'next/image';
 const HowItWorks: React.FC = () => {
   const { t } = useLanguage();
 
@@ -27,9 +28,11 @@ const HowItWorks: React.FC = () => {
           <div className="order-2 lg:order-1 relative">
             <div className="relative rounded-[2rem] overflow-hidden shadow-2xl border-4 border-dashed border-white/30 bg-white p-4 rotate-2 hover:rotate-0 transition-all duration-500">
                 <div className="bg-school-paper rounded-xl overflow-hidden border border-slate-200">
-                    <img 
-                        src="https://illustrations.popsy.co/amber/presentation.svg" 
-                        alt="Tutor Teaching Illustration" 
+                    <Image 
+                        src={no_media_fee} 
+                        alt="No Media Fee" 
+                        width={300}
+                        height={300}
                         className="w-full h-full object-cover p-6 bg-white"
                         loading="lazy"
                     />

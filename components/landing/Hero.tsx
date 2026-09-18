@@ -118,7 +118,7 @@ const Hero: React.FC = () => {
                 className="relative rounded-xl z-10 w-full h-full object-contain drop-shadow-2xl transform transition-transform hover:-translate-y-4 duration-500"
                 width={500}
                 height={500}
-                priority
+                loading='lazy'
                 unoptimized
               />
 

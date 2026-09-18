@@ -4,7 +4,9 @@ import React, { forwardRef } from 'react';
 import { MapPin, Navigation, Ban, Calendar, ShieldCheck, Zap, LucideProps } from 'lucide-react';
 import { Feature } from './types';
 import { useLanguage } from '../../contexts/LanguageContext';
-
+import smartTools from '../../src/images/smart_tools.png';
+import creativeThinking from '../../src/images/smart_thinking.png'
+import Image from 'next/image';
 // Custom Taka Icon Component using the Taka symbol
 const TakaIcon = forwardRef<SVGSVGElement, LucideProps>(({ size, ...props }, ref) => (
   <svg 
@@ -101,11 +103,11 @@ const Features: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         
         {/* Floating Illustrations - Repositioned to stay within view */}
-        <div className="hidden lg:block absolute left-4 top-10 w-40 h-40 animate-bounce duration-[4000ms] z-0">
-           <img src="https://illustrations.popsy.co/amber/graphic-design.svg" alt="Smart Tools" className="w-full h-full object-contain opacity-90" loading="lazy" />
+        <div className="hidden lg:block absolute left-4 top-10 w-40 h-40 z-0">
+           <Image src={smartTools} width={160} height={160} alt="Smart Tools" className="w-full h-full object-contain opacity-90" loading="lazy" />
         </div>
-         <div className="hidden lg:block absolute right-4 top-10 w-40 h-40 animate-pulse duration-[3000ms] z-0">
-           <img src="https://illustrations.popsy.co/amber/remote-work.svg" alt="Creative Learning" className="w-full h-full object-contain opacity-90 transform rotate-12" loading="lazy" />
+         <div className="hidden lg:block absolute right-4 top-10 w-40 h-40  z-0">
+           <Image loading='lazy' src={creativeThinking} alt="Creative Learning" width={160} height={160} className="w-full h-full object-contain opacity-90 transform rotate-12"/>
         </div>
 
         <div className="text-center max-w-3xl mx-auto mb-16 relative z-10">
